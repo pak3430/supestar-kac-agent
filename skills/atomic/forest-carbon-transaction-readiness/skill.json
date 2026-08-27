@@ -1,0 +1,8 @@
+{
+  "type": "Skill",
+  "id": "skill:forest-carbon-transaction-readiness",
+  "derived_from": "method:eleven-gate-priority-evaluation-v1",
+  "name": "forest-carbon-transaction-readiness",
+  "interface": {"required": ["gates"], "optional": ["as_of_date", "evidence"]},
+  "guardrails": ["no_payment", "no_transfer", "no_retirement", "no_legal_or_tax_finality", "no_public_claim_approval"]
+}

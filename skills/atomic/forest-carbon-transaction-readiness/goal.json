@@ -1,0 +1,6 @@
+{
+  "type": "Goal",
+  "id": "goal:evaluate-forest-carbon-transaction-readiness",
+  "derived_from": "identity:forest-carbon-transaction-evidence-pack",
+  "objective": "외부 거래를 실행하지 않고 필요한 증거의 존재·부족·확인 책임을 드러낸다."
+}

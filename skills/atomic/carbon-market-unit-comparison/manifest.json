@@ -1,0 +1,1 @@
+{"chain_id":"carbon-market-unit-comparison","version":"0.1.0","handler":"carbon_market_unit_comparison_v1","provenance_ref":"carbon-market-unit-comparison","nodes":["identity.json","goal.json","task.json","knowledge.json","method.json","skill.json","runtime.json"]}

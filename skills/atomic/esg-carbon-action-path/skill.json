@@ -1,0 +1,11 @@
+{
+  "type": "Skill",
+  "id": "skill:esg-carbon-action-path",
+  "derived_from": "method:minimum-prerequisite-action-path-v1",
+  "name": "esg-carbon-action-path",
+  "interface": {
+    "required": ["question", "userRole", "asOfDate"],
+    "optional": ["focus", "providedEvidence", "measurementEvidence"]
+  },
+  "guardrails": ["no_missing_prerequisite_skip", "no_unverified_impact_claim", "no_transaction", "no_carbon_neutrality_assertion"]
+}

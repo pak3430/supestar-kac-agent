@@ -1,0 +1,11 @@
+{
+  "type": "Knowledge",
+  "id": "knowledge:forest-carbon-process-and-internal-gates-v1",
+  "derived_from": "task:evaluate-eleven-evidence-gates",
+  "source_refs": ["kofpi-forest-carbon-offset-program", "forest-carbon-transaction-gate-policy"],
+  "claims": [
+    "한국임업진흥원 안내는 사업계획, 등록, 모니터링, 검증, 인증과 거래 절차를 구분한다.",
+    "11개 게이트는 거래 실행 전 증거 공백을 찾기 위한 내부 위험통제 정책이다.",
+    "게이트 통과는 법률·세무·인증·등록부·결제의 최종 유효성을 뜻하지 않는다."
+  ]
+}

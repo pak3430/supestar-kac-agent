@@ -1,0 +1,19 @@
+{
+  "type": "SkillRuntime",
+  "id": "runtime:esg-carbon-action-path:0.2.0",
+  "derived_from": "skill:esg-carbon-action-path",
+  "handler": "esg_carbon_action_path_v1",
+  "skill_interface": "structured JSON in; KAC objects out",
+  "input_contract": {"required": ["question", "userRole", "asOfDate"], "optional": ["focus", "providedEvidence", "measurementEvidence"]},
+  "output_contract": {"required": ["verdict", "answer", "ordered_nodes", "reason_per_edge", "next_action", "evidence_refs"]},
+  "source_policy": "Only manifest Knowledge source_refs may ground claims.",
+  "tool_policy": "No network or external action during verdict execution.",
+  "guardrail": "Never skip required measurement boundaries, assert SDG impact without evidence, or execute a transaction.",
+  "validation_rule": "Verdict is PROCEED, REVIEW, or STOP; path is contiguous and evidence uses admitted sources.",
+  "trace_policy": "Record context, chain and runtime versions plus input and decision hashes.",
+  "approval_policy": "Human approval is required for external ESG or SDG claims.",
+  "workflow_spec": ["validate", "map_relationship", "render_output", "review", "feedback"],
+  "invocation_contract": "One input creates one immutable run directory and DB event set.",
+  "state_model": ["ADMITTED", "EXECUTED", "REVIEWED", "CLOSED_NO_CHANGE", "FEEDBACK_PENDING"],
+  "release_policy": "Only compiled fingerprints passing regression tests may run."
+}

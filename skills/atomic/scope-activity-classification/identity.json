@@ -1,0 +1,7 @@
+{
+  "type": "Identity",
+  "id": "identity:organizational-operational-boundary",
+  "name": "ORGANIZATIONAL_AND_OPERATIONAL_BOUNDARY",
+  "meaning": "보고 조직의 경계와 배출 활동의 소유·통제·구매에너지·가치사슬 관계",
+  "boundary": "Scope 후보 분류와 배출량 계산은 별개다."
+}

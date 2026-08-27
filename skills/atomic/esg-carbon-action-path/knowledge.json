@@ -1,0 +1,13 @@
+{
+  "type": "Knowledge",
+  "id": "knowledge:esg-carbon-prerequisite-order-v1",
+  "derived_from": "task:select-minimum-esg-carbon-path",
+  "source_refs": ["ghg-protocol-corporate-standard-faq", "un-sustainable-development-goals", "supestar-stage-v1-derived-skill-contracts"],
+  "claims": [
+    "온실가스 인벤토리는 직접·간접 배출을 구분하며 Scope 1·2·3을 포함한다.",
+    "SDGs는 17개 목표와 169개 세부목표의 통합적·불가분적 지속가능발전 체계다.",
+    "탄소는 ESG 환경성과의 한 측정 영역이며 ESG 전체와 동일하지 않다.",
+    "산림·기후 행동은 SDG 13과 15에 관련될 수 있으나 실제 기여 주장은 별도 증거가 필요하다.",
+    "시장 또는 산림탄소 행동 전에는 조직·운영 경계, 활동자료, 배출계수, 직접감축과 잔여배출을 먼저 확인한다."
+  ]
+}

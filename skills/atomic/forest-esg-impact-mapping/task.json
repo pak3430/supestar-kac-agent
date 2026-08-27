@@ -1,0 +1,1 @@
+{"type":"Task","id":"task:build-forest-esg-map","derived_from":"goal:map-forest-esg-impact-responsibility","inputs":["projectSummary","asOfDate","environmentEvidence","socialEvidence","governanceEvidence"],"outputs":["axis_map","missing_axis_questions","verdict"]}

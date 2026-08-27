@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="로컬 Qwen이 CCS 지식을 관찰하고 KAC 원자 스킬을 실행하는 수페스타 에이전트">
+  <title>수페스타 KAC Agent</title>
+  <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="수페스타 KAC Agent 홈">
+      <span class="brand-mark" aria-hidden="true">⌁</span>
+      <span><strong>수페스타</strong><small>KAC Agent · Local Qwen</small></span>
+    </a>
+    <div class="runtime-badges" aria-label="실행 환경">
+      <span id="modelBadge" class="badge pending">MODEL CHECK</span>
+      <span class="badge">NO INTERNET</span>
+      <span class="badge">NO FIXED ROUTE</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <p class="eyebrow">지식이 답에 머물지 않고, 다음 행동을 선택하는 구조</p>
+      <h1>질문을 받으면 지식을 연결하고<br>원자 스킬을 실제로 실행합니다.</h1>
+      <p class="hero-copy">수페스타는 일반 답변을 먼저 만들지 않습니다. 로컬 Qwen이 CCS에서 개념과 관계를 관찰하고, 필요한 KAC 스킬을 선택·실행한 뒤 검증된 claim만 답변으로 공개합니다.</p>
+      <div class="pipeline" aria-label="에이전트 실행 순서">
+        <span>질문</span><i>→</i><span>Qwen 행동 선택</span><i>→</i><span>CCS 관찰</span><i>→</i><span>KAC SkillRun</span><i>→</i><span>검증 답변</span>
+      </div>
+    </section>
+
+    <section class="workspace">
+      <article class="chat-panel">
+        <div class="panel-heading">
+          <div><p class="panel-kicker">QUESTION</p><h2>수페스타에게 물어보세요</h2></div>
+          <button id="resetButton" class="quiet-button" type="button">새 질문</button>
+        </div>
+        <div class="examples" aria-label="예시 질문">
+          <button type="button" data-question="ESG 관점에서 탄소크레딧과 어떤 상관관계가 있습니까?">ESG × 탄소크레딧</button>
+          <button type="button" data-question="우리 회사가 소유하고 직접 운영·통제하는 사업장 보일러에서 도시가스를 연소합니다. 이 배출원은 Scope 몇인가요?">보일러 Scope 분류</button>
+          <button type="button" data-question="산림탄소사업은 ESG와 SDGs에 어떻게 연결됩니까?">산림탄소 × ESG × SDGs</button>
+        </div>
+        <div id="conversation" class="conversation" aria-live="polite">
+          <div class="welcome-card">
+            <strong>고정 답변이 아닙니다.</strong>
+            <p>질문마다 독립된 Agent run이 생성됩니다. 오른쪽 실행 관찰에서 모델이 어떤 지식과 스킬을 골랐는지 확인할 수 있습니다.</p>
+          </div>
+        </div>
+        <form id="questionForm" class="composer">
+          <label for="questionInput" class="sr-only">질문</label>
+          <textarea id="questionInput" rows="3" maxlength="2000" placeholder="예: ESG 관점에서 탄소크레딧과 어떤 상관관계가 있습니까?" required></textarea>
+          <div class="composer-footer">
+            <span id="statusText">로컬 모델 상태를 확인하고 있습니다.</span>
+            <button id="sendButton" type="submit">실행 시작</button>
+          </div>
+        </form>
+      </article>
+
+      <aside class="trace-panel">
+        <div class="panel-heading">
+          <div><p class="panel-kicker">LIVE TRACE</p><h2>실행 관찰</h2></div>
+          <span id="runStatus" class="run-status idle">대기</span>
+        </div>
+        <div class="proof-strip">
+          <div><span>지식 그래프</span><strong id="graphCount">—</strong></div>
+          <div><span>원자 스킬</span><strong id="skillCount">—</strong></div>
+          <div><span>인터넷</span><strong>사용 안 함</strong></div>
+        </div>
+        <ol id="traceList" class="trace-list">
+          <li class="trace-placeholder">질문을 실행하면 Qwen의 행동과 Observation이 순서대로 나타납니다.</li>
+        </ol>
+        <details class="technical-details">
+          <summary>검증 원문 보기</summary>
+          <pre id="rawResult">아직 실행 결과가 없습니다.</pre>
+        </details>
+      </aside>
+    </section>
+  </main>
+
+  <footer>
+    <p>이 화면은 결과를 꾸미는 대시보드가 아니라, Local Qwen → CCS → KAC Skill → Verifier 실행을 관찰하는 증명 화면입니다.</p>
+  </footer>
+  <script src="/assets/app.js" defer></script>
+</body>
+</html>

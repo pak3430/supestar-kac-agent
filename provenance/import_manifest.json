@@ -1,0 +1,442 @@
+{
+  "active_skill_names": [
+    "esg-carbon-action-path",
+    "scope-activity-classification",
+    "carbon-market-unit-comparison",
+    "forest-esg-impact-mapping",
+    "forest-carbon-procedure-guidance",
+    "forest-carbon-transaction-readiness"
+  ],
+  "excluded_skill_names": [
+    {
+      "name": "supestar-question-routing",
+      "reason": "Replaced by Local Qwen next-action selection; fixed question routing is forbidden in v3."
+    }
+  ],
+  "files": [
+    {
+      "destination_path": "skills/atomic/esg-carbon-action-path/manifest.json",
+      "destination_sha256": "9fedcf2bf52fa7145d3a4e7aa92fa964681bc8de9f480906986db35d6339a5a1",
+      "source_path": "kac/chains/esg-carbon-action-path/manifest.json",
+      "source_sha256": "9fedcf2bf52fa7145d3a4e7aa92fa964681bc8de9f480906986db35d6339a5a1",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "skills/atomic/esg-carbon-action-path/identity.json",
+      "destination_sha256": "09955eaef3ca22d09b084d540f72edca301cec9f3a66e90ca3bb7289e195e43f",
+      "source_path": "kac/chains/esg-carbon-action-path/identity.json",
+      "source_sha256": "09955eaef3ca22d09b084d540f72edca301cec9f3a66e90ca3bb7289e195e43f",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "skills/atomic/esg-carbon-action-path/goal.json",
+      "destination_sha256": "d9d58f05d92f6e0599a0b24daed2162ce577ebac2b96ea7010252daa256327a9",
+      "source_path": "kac/chains/esg-carbon-action-path/goal.json",
+      "source_sha256": "d9d58f05d92f6e0599a0b24daed2162ce577ebac2b96ea7010252daa256327a9",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "skills/atomic/esg-carbon-action-path/task.json",
+      "destination_sha256": "538604a1dd80f4ddfff33d25858f9a02147137c1c38ac7ecc4faefd5e834c0bb",
+      "source_path": "kac/chains/esg-carbon-action-path/task.json",
+      "source_sha256": "538604a1dd80f4ddfff33d25858f9a02147137c1c38ac7ecc4faefd5e834c0bb",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "skills/atomic/esg-carbon-action-path/knowledge.json",
+      "destination_sha256": "1dfed1bb19d74674d4dbbe91046e6da139c2743238b522ada3d6256100303e4b",
+      "source_path": "kac/chains/esg-carbon-action-path/knowledge.json",
+      "source_sha256": "1dfed1bb19d74674d4dbbe91046e6da139c2743238b522ada3d6256100303e4b",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "skills/atomic/esg-carbon-action-path/method.json",
+      "destination_sha256": "2a9d52e04d545933fd751401e8ffe2ef4e8aa2648ea843060064e94b67e23bf4",
+      "source_path": "kac/chains/esg-carbon-action-path/method.json",
+      "source_sha256": "2a9d52e04d545933fd751401e8ffe2ef4e8aa2648ea843060064e94b67e23bf4",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "skills/atomic/esg-carbon-action-path/skill.json",
+      "destination_sha256": "1869087e3b760f2d751fb3b5de870b0b543cc0cb8ba8d0516acbf07873b33519",
+      "source_path": "kac/chains/esg-carbon-action-path/skill.json",
+      "source_sha256": "1869087e3b760f2d751fb3b5de870b0b543cc0cb8ba8d0516acbf07873b33519",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "skills/atomic/esg-carbon-action-path/runtime.json",
+      "destination_sha256": "274fccb0382f34fbf5af6ab24a061a1fee69e28426d5b8d460b5501432ebe839",
+      "source_path": "kac/chains/esg-carbon-action-path/runtime.json",
+      "source_sha256": "274fccb0382f34fbf5af6ab24a061a1fee69e28426d5b8d460b5501432ebe839",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "skills/atomic/scope-activity-classification/manifest.json",
+      "destination_sha256": "2f04d8981d324aa9c0c5c6d55b698bd173878d46ac0a53924d98bd5143d91b99",
+      "source_path": "kac/chains/scope-activity-classification/manifest.json",
+      "source_sha256": "2f04d8981d324aa9c0c5c6d55b698bd173878d46ac0a53924d98bd5143d91b99",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "skills/atomic/scope-activity-classification/identity.json",
+      "destination_sha256": "8e10b988673ac045a0c2b872ca959efe16a8f7940dbb883cd064fb5d65ca54cf",
+      "source_path": "kac/chains/scope-activity-classification/identity.json",
+      "source_sha256": "8e10b988673ac045a0c2b872ca959efe16a8f7940dbb883cd064fb5d65ca54cf",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "skills/atomic/scope-activity-classification/goal.json",
+      "destination_sha256": "71fdb38a02946433f24448e06d25e5f3e0201d26f0c6ed347ddeb90123f2f59c",
+      "source_path": "kac/chains/scope-activity-classification/goal.json",
+      "source_sha256": "71fdb38a02946433f24448e06d25e5f3e0201d26f0c6ed347ddeb90123f2f59c",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "skills/atomic/scope-activity-classification/task.json",
+      "destination_sha256": "675a1fd31a483178cdb683fe0af229c05ec246d0c1d9027974b86af5146c623b",
+      "source_path": "kac/chains/scope-activity-classification/task.json",
+      "source_sha256": "675a1fd31a483178cdb683fe0af229c05ec246d0c1d9027974b86af5146c623b",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "skills/atomic/scope-activity-classification/knowledge.json",
+      "destination_sha256": "dba7b9660694ac233068fa2caf8fd444c115bb4be7109fd992b7c5f1d107cef7",
+      "source_path": "kac/chains/scope-activity-classification/knowledge.json",
+      "source_sha256": "dba7b9660694ac233068fa2caf8fd444c115bb4be7109fd992b7c5f1d107cef7",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "skills/atomic/scope-activity-classification/method.json",
+      "destination_sha256": "433115bf77fe10b0d8eb17c1ffe8c307c7a37175c8a395695e6903c93aacf929",
+      "source_path": "kac/chains/scope-activity-classification/method.json",
+      "source_sha256": "433115bf77fe10b0d8eb17c1ffe8c307c7a37175c8a395695e6903c93aacf929",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "skills/atomic/scope-activity-classification/skill.json",
+      "destination_sha256": "4137d3deb979344adfab6007ef219b84714696c874a6f8a977c30b6c82542c2d",
+      "source_path": "kac/chains/scope-activity-classification/skill.json",
+      "source_sha256": "4137d3deb979344adfab6007ef219b84714696c874a6f8a977c30b6c82542c2d",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "skills/atomic/scope-activity-classification/runtime.json",
+      "destination_sha256": "8e5cd54e35745a25c51895182a8770eaae719671fb65b8123658148df5e14f23",
+      "source_path": "kac/chains/scope-activity-classification/runtime.json",
+      "source_sha256": "8e5cd54e35745a25c51895182a8770eaae719671fb65b8123658148df5e14f23",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "skills/atomic/carbon-market-unit-comparison/manifest.json",
+      "destination_sha256": "4c2b4a1b0af561b7488b110b03ed7d722fad0cc8e7aae84485424220d2198059",
+      "source_path": "kac/chains/carbon-market-unit-comparison/manifest.json",
+      "source_sha256": "4c2b4a1b0af561b7488b110b03ed7d722fad0cc8e7aae84485424220d2198059",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "skills/atomic/carbon-market-unit-comparison/identity.json",
+      "destination_sha256": "b17a2170209a23b6f6a5afa7666c76dc6159daaca393e96fd02c0042e721a593",
+      "source_path": "kac/chains/carbon-market-unit-comparison/identity.json",
+      "source_sha256": "b17a2170209a23b6f6a5afa7666c76dc6159daaca393e96fd02c0042e721a593",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "skills/atomic/carbon-market-unit-comparison/goal.json",
+      "destination_sha256": "d8983a4da2c37b028f52de7405ff17497f9a1eb74462d8aae23f8f8f92304797",
+      "source_path": "kac/chains/carbon-market-unit-comparison/goal.json",
+      "source_sha256": "d8983a4da2c37b028f52de7405ff17497f9a1eb74462d8aae23f8f8f92304797",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "skills/atomic/carbon-market-unit-comparison/task.json",
+      "destination_sha256": "d1a09262d2bc17dd6b556f833c388e802fe41232ffb5fdeba389c2e7eeb18139",
+      "source_path": "kac/chains/carbon-market-unit-comparison/task.json",
+      "source_sha256": "d1a09262d2bc17dd6b556f833c388e802fe41232ffb5fdeba389c2e7eeb18139",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "skills/atomic/carbon-market-unit-comparison/knowledge.json",
+      "destination_sha256": "65546543351894e07688a656c91b1de8a94c012262fad2be7355b75b77f703b5",
+      "source_path": "kac/chains/carbon-market-unit-comparison/knowledge.json",
+      "source_sha256": "65546543351894e07688a656c91b1de8a94c012262fad2be7355b75b77f703b5",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "skills/atomic/carbon-market-unit-comparison/method.json",
+      "destination_sha256": "9e24b124e45fe44de38cca934ecc09a6530912cdbc8a76661f064e8f80a8afcf",
+      "source_path": "kac/chains/carbon-market-unit-comparison/method.json",
+      "source_sha256": "9e24b124e45fe44de38cca934ecc09a6530912cdbc8a76661f064e8f80a8afcf",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "skills/atomic/carbon-market-unit-comparison/skill.json",
+      "destination_sha256": "c6518cbbc08a8263cc126c255e3a8a1fa5ffdc3e45e58acd1780df493c33440f",
+      "source_path": "kac/chains/carbon-market-unit-comparison/skill.json",
+      "source_sha256": "c6518cbbc08a8263cc126c255e3a8a1fa5ffdc3e45e58acd1780df493c33440f",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "skills/atomic/carbon-market-unit-comparison/runtime.json",
+      "destination_sha256": "3685b3092a610f04bf7f0130dc695fb9a523981817a3568e8062db6941c11b45",
+      "source_path": "kac/chains/carbon-market-unit-comparison/runtime.json",
+      "source_sha256": "3685b3092a610f04bf7f0130dc695fb9a523981817a3568e8062db6941c11b45",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "skills/atomic/forest-esg-impact-mapping/manifest.json",
+      "destination_sha256": "8dba6fb9fbd42ab4554fdcab0828a348e960d00fcc9a3205b5887dbfa4a4d45c",
+      "source_path": "kac/chains/forest-esg-impact-mapping/manifest.json",
+      "source_sha256": "8dba6fb9fbd42ab4554fdcab0828a348e960d00fcc9a3205b5887dbfa4a4d45c",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "skills/atomic/forest-esg-impact-mapping/identity.json",
+      "destination_sha256": "4e38b9b8b1a66e690b734ede0a797bd2931ac18ae6c5c76eee443379b4b4986c",
+      "source_path": "kac/chains/forest-esg-impact-mapping/identity.json",
+      "source_sha256": "4e38b9b8b1a66e690b734ede0a797bd2931ac18ae6c5c76eee443379b4b4986c",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "skills/atomic/forest-esg-impact-mapping/goal.json",
+      "destination_sha256": "536cbccb46b51643eacc88c824985e8918e91d8732e66eccb38afa585c7e2fcd",
+      "source_path": "kac/chains/forest-esg-impact-mapping/goal.json",
+      "source_sha256": "536cbccb46b51643eacc88c824985e8918e91d8732e66eccb38afa585c7e2fcd",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "skills/atomic/forest-esg-impact-mapping/task.json",
+      "destination_sha256": "19d686893e6a8b14322538971080a44528d4c2f7b75c187ef0c7ec7c88cc6ffd",
+      "source_path": "kac/chains/forest-esg-impact-mapping/task.json",
+      "source_sha256": "19d686893e6a8b14322538971080a44528d4c2f7b75c187ef0c7ec7c88cc6ffd",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "skills/atomic/forest-esg-impact-mapping/knowledge.json",
+      "destination_sha256": "376289d045b7ba1c1b5e705cd806fa2d31cb627f724358d90aea5c9d9107a77f",
+      "source_path": "kac/chains/forest-esg-impact-mapping/knowledge.json",
+      "source_sha256": "376289d045b7ba1c1b5e705cd806fa2d31cb627f724358d90aea5c9d9107a77f",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "skills/atomic/forest-esg-impact-mapping/method.json",
+      "destination_sha256": "0865aede1b0339b6f70d7a40184d0821266c7fc44dd86387dfa4ee5e06b3a181",
+      "source_path": "kac/chains/forest-esg-impact-mapping/method.json",
+      "source_sha256": "0865aede1b0339b6f70d7a40184d0821266c7fc44dd86387dfa4ee5e06b3a181",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "skills/atomic/forest-esg-impact-mapping/skill.json",
+      "destination_sha256": "3e095584932e0458a9d8b6e383d2a59597ba9967e6bb379a69a8c0cc6a715137",
+      "source_path": "kac/chains/forest-esg-impact-mapping/skill.json",
+      "source_sha256": "3e095584932e0458a9d8b6e383d2a59597ba9967e6bb379a69a8c0cc6a715137",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "skills/atomic/forest-esg-impact-mapping/runtime.json",
+      "destination_sha256": "cdfd470fa1adf0c0a054baee6df33503e833c95345c05cdaa16196c22eb638eb",
+      "source_path": "kac/chains/forest-esg-impact-mapping/runtime.json",
+      "source_sha256": "cdfd470fa1adf0c0a054baee6df33503e833c95345c05cdaa16196c22eb638eb",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "skills/atomic/forest-carbon-procedure-guidance/manifest.json",
+      "destination_sha256": "89c38f45a4a0e6f41af77182876c64346d11d7146d78445becf350583c8a8153",
+      "source_path": "kac/chains/forest-carbon-procedure-guidance/manifest.json",
+      "source_sha256": "89c38f45a4a0e6f41af77182876c64346d11d7146d78445becf350583c8a8153",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "skills/atomic/forest-carbon-procedure-guidance/identity.json",
+      "destination_sha256": "276ba487e9a6bd949e7db830bbaf0006fadebf792628a6e89867ced7e4c63a0a",
+      "source_path": "kac/chains/forest-carbon-procedure-guidance/identity.json",
+      "source_sha256": "276ba487e9a6bd949e7db830bbaf0006fadebf792628a6e89867ced7e4c63a0a",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "skills/atomic/forest-carbon-procedure-guidance/goal.json",
+      "destination_sha256": "f624cda6bf2a72f10cb41827d9c85d33dffe2aee7f081d01dc5297fba89e7aef",
+      "source_path": "kac/chains/forest-carbon-procedure-guidance/goal.json",
+      "source_sha256": "f624cda6bf2a72f10cb41827d9c85d33dffe2aee7f081d01dc5297fba89e7aef",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "skills/atomic/forest-carbon-procedure-guidance/task.json",
+      "destination_sha256": "e957df4576aeaed5256d6232eca4eca575604e3b5866da3eb94eb715b80664ce",
+      "source_path": "kac/chains/forest-carbon-procedure-guidance/task.json",
+      "source_sha256": "e957df4576aeaed5256d6232eca4eca575604e3b5866da3eb94eb715b80664ce",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "skills/atomic/forest-carbon-procedure-guidance/knowledge.json",
+      "destination_sha256": "501d65f414ff16bf8adbb4f4619cdff3cf3c51166532793289d39af1d8d05fdf",
+      "source_path": "kac/chains/forest-carbon-procedure-guidance/knowledge.json",
+      "source_sha256": "501d65f414ff16bf8adbb4f4619cdff3cf3c51166532793289d39af1d8d05fdf",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "skills/atomic/forest-carbon-procedure-guidance/method.json",
+      "destination_sha256": "3b26f16a497c395b4aff3e2c0797f6314da07dbba6ad14cc943162fdec563503",
+      "source_path": "kac/chains/forest-carbon-procedure-guidance/method.json",
+      "source_sha256": "3b26f16a497c395b4aff3e2c0797f6314da07dbba6ad14cc943162fdec563503",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "skills/atomic/forest-carbon-procedure-guidance/skill.json",
+      "destination_sha256": "99ccd8d6c594ca34ab8990dbe06ccd731b032e887b652d0500c6c453bf1d1ab9",
+      "source_path": "kac/chains/forest-carbon-procedure-guidance/skill.json",
+      "source_sha256": "99ccd8d6c594ca34ab8990dbe06ccd731b032e887b652d0500c6c453bf1d1ab9",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "skills/atomic/forest-carbon-procedure-guidance/runtime.json",
+      "destination_sha256": "d6141a620abdb3d3556860b23aa59cb386ca6824bc74d9e888015885e754dc3f",
+      "source_path": "kac/chains/forest-carbon-procedure-guidance/runtime.json",
+      "source_sha256": "d6141a620abdb3d3556860b23aa59cb386ca6824bc74d9e888015885e754dc3f",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "skills/atomic/forest-carbon-transaction-readiness/manifest.json",
+      "destination_sha256": "dd640b032c5d49617e1b5bc5b16da784937c5326cbc862ed86b410d2e444d81f",
+      "source_path": "kac/chains/forest-carbon-transaction-readiness/manifest.json",
+      "source_sha256": "dd640b032c5d49617e1b5bc5b16da784937c5326cbc862ed86b410d2e444d81f",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "skills/atomic/forest-carbon-transaction-readiness/identity.json",
+      "destination_sha256": "517771dd61a79b917eb4a5b769570d7b826bad2dab16d887d03cc637677e332c",
+      "source_path": "kac/chains/forest-carbon-transaction-readiness/identity.json",
+      "source_sha256": "517771dd61a79b917eb4a5b769570d7b826bad2dab16d887d03cc637677e332c",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "skills/atomic/forest-carbon-transaction-readiness/goal.json",
+      "destination_sha256": "9a8bd9387850fe85d9c582f353d8d0f58c952fb1c466a9fc1570222bf127536d",
+      "source_path": "kac/chains/forest-carbon-transaction-readiness/goal.json",
+      "source_sha256": "9a8bd9387850fe85d9c582f353d8d0f58c952fb1c466a9fc1570222bf127536d",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "skills/atomic/forest-carbon-transaction-readiness/task.json",
+      "destination_sha256": "aec36e45072ea06cca12b48f53760efba262fb6c17bf710237d4e9ec6af1cbd5",
+      "source_path": "kac/chains/forest-carbon-transaction-readiness/task.json",
+      "source_sha256": "aec36e45072ea06cca12b48f53760efba262fb6c17bf710237d4e9ec6af1cbd5",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "skills/atomic/forest-carbon-transaction-readiness/knowledge.json",
+      "destination_sha256": "e01f3e10ea3649a3e88225bc7352bc7d92a12733512cb43cebdc8fd3ffd382ff",
+      "source_path": "kac/chains/forest-carbon-transaction-readiness/knowledge.json",
+      "source_sha256": "e01f3e10ea3649a3e88225bc7352bc7d92a12733512cb43cebdc8fd3ffd382ff",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "skills/atomic/forest-carbon-transaction-readiness/method.json",
+      "destination_sha256": "d7549e70872c882613b987d4877386a11e43ea4d2b49c5fb2c7fa3fd42ba5e7f",
+      "source_path": "kac/chains/forest-carbon-transaction-readiness/method.json",
+      "source_sha256": "d7549e70872c882613b987d4877386a11e43ea4d2b49c5fb2c7fa3fd42ba5e7f",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "skills/atomic/forest-carbon-transaction-readiness/skill.json",
+      "destination_sha256": "84884b8ee424a1511c58f44be92c5cc86c4fb0745c65547297ca31f1054574b7",
+      "source_path": "kac/chains/forest-carbon-transaction-readiness/skill.json",
+      "source_sha256": "84884b8ee424a1511c58f44be92c5cc86c4fb0745c65547297ca31f1054574b7",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "skills/atomic/forest-carbon-transaction-readiness/runtime.json",
+      "destination_sha256": "0b6174d7a7517e69689c7a1877e1a402bc8e5ce16e881dbca6d5e1de17ef6b1e",
+      "source_path": "kac/chains/forest-carbon-transaction-readiness/runtime.json",
+      "source_sha256": "0b6174d7a7517e69689c7a1877e1a402bc8e5ce16e881dbca6d5e1de17ef6b1e",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "provenance/imported/v2/provenance/stage_v1_import/derivation_manifest.json",
+      "destination_sha256": "c4903d63f26cc244a2fa07be198bbb8095652bbc7ca2fb478badca8c38a7b879",
+      "source_path": "provenance/stage_v1_import/derivation_manifest.json",
+      "source_sha256": "c4903d63f26cc244a2fa07be198bbb8095652bbc7ca2fb478badca8c38a7b879",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "provenance/imported/v2/provenance/stage_v1_import/snapshots/stage4_005_esg_management_closure.md",
+      "destination_sha256": "a3395643fea58646ea08d25628a2a7e175f7bc1dcfd1e9d254c9d7451398e302",
+      "source_path": "provenance/stage_v1_import/snapshots/stage4_005_esg_management_closure.md",
+      "source_sha256": "a3395643fea58646ea08d25628a2a7e175f7bc1dcfd1e9d254c9d7451398e302",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "provenance/imported/v2/provenance/stage_v1_import/snapshots/stage4_007_organizational_boundary_closure.md",
+      "destination_sha256": "26ff9ef7dd5ac02a3b6bbf0ff0486f5af359cec5b7a2968f0a539032e4f8fe6f",
+      "source_path": "provenance/stage_v1_import/snapshots/stage4_007_organizational_boundary_closure.md",
+      "source_sha256": "26ff9ef7dd5ac02a3b6bbf0ff0486f5af359cec5b7a2968f0a539032e4f8fe6f",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "provenance/imported/v2/provenance/stage_v1_import/snapshots/stage4_031_climate_claim_closure.md",
+      "destination_sha256": "f230c99237f528f56a9bc2fe1e149de1ee9ffc5c7765d26cb5428c4ac3225505",
+      "source_path": "provenance/stage_v1_import/snapshots/stage4_031_climate_claim_closure.md",
+      "source_sha256": "f230c99237f528f56a9bc2fe1e149de1ee9ffc5c7765d26cb5428c4ac3225505",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "provenance/imported/v2/provenance/stage_v1_import/snapshots/stage4_034_forest_carbon_project_closure.md",
+      "destination_sha256": "73fae5366f91ab349ab57a60b563ba4b3c04be0354a4410a2dc4447b3b9e9ba1",
+      "source_path": "provenance/stage_v1_import/snapshots/stage4_034_forest_carbon_project_closure.md",
+      "source_sha256": "73fae5366f91ab349ab57a60b563ba4b3c04be0354a4410a2dc4447b3b9e9ba1",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "provenance/imported/v2/provenance/stage_v1_import/snapshots/stage4_061_transaction_evidence_pack_closure.md",
+      "destination_sha256": "ad421ed19fe88f4916d5eff2048849c4d526ca2b46bc553177a295ec2227eeba",
+      "source_path": "provenance/stage_v1_import/snapshots/stage4_061_transaction_evidence_pack_closure.md",
+      "source_sha256": "ad421ed19fe88f4916d5eff2048849c4d526ca2b46bc553177a295ec2227eeba",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "provenance/imported/v2/provenance/stage_v1_import/snapshots/stage_1_to_5_post_execution_verification.json",
+      "destination_sha256": "9a716672155146f11bd0df7bfbd5e4f897b0e9e00b19af1fa177dd7fd16b6382",
+      "source_path": "provenance/stage_v1_import/snapshots/stage_1_to_5_post_execution_verification.json",
+      "source_sha256": "9a716672155146f11bd0df7bfbd5e4f897b0e9e00b19af1fa177dd7fd16b6382",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "provenance/imported/v2/provenance/stage_v1_import/snapshots/transaction_evidence_grounding_approval.md",
+      "destination_sha256": "858bd449b39a9900034b039a029a52527cca9523f01b31c3602703ad22588632",
+      "source_path": "provenance/stage_v1_import/snapshots/transaction_evidence_grounding_approval.md",
+      "source_sha256": "858bd449b39a9900034b039a029a52527cca9523f01b31c3602703ad22588632",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "provenance/imported/v2/sources/registry/source_registry.json",
+      "destination_sha256": "44ef9be098db227a7c1e2b1d73756d9fa47868d16663b8ccea7072e0e60a5a94",
+      "source_path": "sources/registry/source_registry.json",
+      "source_sha256": "44ef9be098db227a7c1e2b1d73756d9fa47868d16663b8ccea7072e0e60a5a94",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "provenance/imported/v2/sources/registry/official_source_claims_2026-08-27.json",
+      "destination_sha256": "f3615a391aded17e3ea4821dbacb9c53f19634d00d0c8bca7e757a2cb01e6280",
+      "source_path": "sources/registry/official_source_claims_2026-08-27.json",
+      "source_sha256": "f3615a391aded17e3ea4821dbacb9c53f19634d00d0c8bca7e757a2cb01e6280",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "provenance/imported/v2/sources/registry/forest_carbon_transaction_gate_policy.json",
+      "destination_sha256": "30899ec74b0ec75fb8e0effb3faff1833d1a9659152a5a1fd3af719bc1964486",
+      "source_path": "sources/registry/forest_carbon_transaction_gate_policy.json",
+      "source_sha256": "30899ec74b0ec75fb8e0effb3faff1833d1a9659152a5a1fd3af719bc1964486",
+      "transformation": "BYTE_IDENTICAL"
+    },
+    {
+      "destination_path": "provenance/imported/v2/domain_context/versions/0.1.0/domain_context.json",
+      "destination_sha256": "2d5aab09c4310552d06a38594001800acbfacfb4872db3b45a5a09df30805445",
+      "source_path": "domain_context/versions/0.1.0/domain_context.json",
+      "source_sha256": "2d5aab09c4310552d06a38594001800acbfacfb4872db3b45a5a09df30805445",
+      "transformation": "BYTE_IDENTICAL"
+    }
+  ],
+  "schema_version": "1.0.0",
+  "source_commit": "e6a27e7fb9d28c0662df2f81e78bf170793f0f7e",
+  "source_repository": "https://github.com/pak3430/supestar-full-kac.git",
+  "status": "SEALED_IMPORT"
+}

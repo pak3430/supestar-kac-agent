@@ -1,0 +1,7 @@
+{
+  "type": "Task",
+  "id": "task:evaluate-eleven-evidence-gates",
+  "derived_from": "goal:evaluate-forest-carbon-transaction-readiness",
+  "inputs": ["gates"],
+  "outputs": ["gate_results", "overall_verdict", "missing_evidence", "human_confirmation_targets"]
+}

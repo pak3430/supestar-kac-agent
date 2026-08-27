@@ -1,0 +1,63 @@
+{
+  "verificationStatus": "SEALED_PASS",
+  "verifiedAt": "2026-08-21T16:52:41+0900",
+  "runID": "forest_esg_concept_v1_20260821_164823",
+  "runRoot": "<REDACTED_SOURCE_RUN_ROOT>",
+  "bindings": {
+    "inputDocumentCount": 9,
+    "frozenIdentitySnapshotFileCount": 0,
+    "provisionalNodeSet": "EMPTY SET",
+    "optionalDiagnoseThenBuildFilter": "NOT_TAKEN"
+  },
+  "stageCounts": {
+    "stage3CandidateCount": 85,
+    "stage4PairwiseComparisonCount": 3570,
+    "stage4ClosureCount": 85,
+    "stage4MintedPassCount": 85,
+    "stage5FeedbackRecordCount": 85,
+    "stage5LedgerEntryCount": 85,
+    "stage5NoFeedbackNeededCount": 85
+  },
+  "closureArtifactCounts": {
+    "identity": 85,
+    "goal": 85,
+    "task": 85,
+    "knowledge": 85,
+    "method": 85,
+    "skill": 85
+  },
+  "skillCreatorQuickValidate": {
+    "pass": 85,
+    "fail": 0
+  },
+  "markdownLinkValidation": {
+    "initialReportedErrorCount": 336,
+    "initialResultClassification": "VALIDATOR_FALSE_POSITIVE",
+    "cause": "Percent-encoded Korean path segments were checked without URL decoding.",
+    "correctedErrorCount": 0,
+    "pipelineMembersRerun": false
+  },
+  "ledger": {
+    "sha256BeforeC2": "7ac6888295c2a11588e6e9030da9882ee1748a8058264e65f458ceb51c3be1c2",
+    "sha256AfterC2": "7ac6888295c2a11588e6e9030da9882ee1748a8058264e65f458ceb51c3be1c2",
+    "byteUnchangedByC2": true
+  },
+  "seedBoundary": {
+    "generated": true,
+    "verified": true,
+    "appliedInThisRun": false,
+    "candidateRoster": "PROHIBITED_AND_ABSENT",
+    "returnEdge": "UNTOUCHED"
+  },
+  "canonicalProtection": {
+    "canonicalPromotionPerformed": false,
+    "canonicalIdentityMarkdownCount": 0,
+    "digestBefore": "d48dedded7fcf5b350b0794f051ab7bfd39d44dbf1855c2e407e26148a6b0570",
+    "digestAfter": "d48dedded7fcf5b350b0794f051ab7bfd39d44dbf1855c2e407e26148a6b0570",
+    "digestUnchanged": true
+  },
+  "execution": {
+    "executedScriptSha256": "058c4c85c9e9b40ec3d730f10bfc37e2374162d71652179268f794fdcaf1fc84",
+    "correctedValidatorSha256": "0ffd4490023d15828fe01db2f7a2b01e639feb24d94d9db6308cb761be388aa1"
+  }
+}

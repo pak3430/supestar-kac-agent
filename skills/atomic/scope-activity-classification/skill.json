@@ -1,0 +1,11 @@
+{
+  "type": "Skill",
+  "id": "skill:scope-activity-classification",
+  "derived_from": "method:closed-scope-classification-v1",
+  "name": "scope-activity-classification",
+  "interface": {
+    "required": ["activity_description", "organization_boundary", "source_ownership_or_control", "purchased_energy_type", "value_chain_relation"],
+    "optional": ["activity_data", "evidence"]
+  },
+  "guardrails": ["no_emissions_calculation", "no_missing_relation_inference", "no_scope3_sum"]
+}

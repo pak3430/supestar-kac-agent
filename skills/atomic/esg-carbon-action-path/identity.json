@@ -1,0 +1,7 @@
+{
+  "type": "Identity",
+  "id": "identity:esg-management",
+  "name": "ESG_MANAGEMENT",
+  "meaning": "ESG 목표를 측정 가능한 행동과 책임으로 운영하는 개념",
+  "boundary": "행동이 있었다는 주장만으로 성과를 증명하지 않으며, 탄소는 ESG 전체가 아니다."
+}

@@ -1,57 +1,136 @@
 # Supestar KAC Agent
 
-Local Qwen이 CCS 지식 환경을 관찰하고, 관계를 탐색하고, KAC 원자 Skill을 선택·실행한 뒤 그 결과를 다시 관찰하는 **자율 지식행동사슬 챗봇 v3** 프로젝트입니다.
+Local Qwen이 CCS 지식을 관찰하고 관계를 확장한 뒤, Stage 1~5에서 파생된 KAC 원자 스킬을 선택·실행하는 **로컬 지식행동사슬 에이전트**입니다.
 
-## 이 저장소가 새로 시작된 이유
+이 저장소의 핵심은 “지식 JSON을 검색해 문장을 조립하는 챗봇”이 아닙니다. Qwen이 매 turn의 Observation을 보고 다음 행동을 고르고, 선택한 스킬이 실제 Python Runtime에서 실행되며, 검증된 claim만 사용자에게 공개됩니다.
 
-기존 `supestar-full-kac` v2는 Stage 파생 Skill의 결정적 실행을 증명했지만, 질문별 키워드 라우터가 실행 경로를 선택했고 LLM은 사용하지 않았습니다. 이 저장소는 다음 목표를 위해 v2 실행 코드를 복사하지 않고 새로 시작합니다.
+## 현재 구현 상태
 
-> 사용자가 탐색 경로를 지정하지 않아도 Local Qwen이 필요한 지식과 Skill을 스스로 선택하고, 실행 결과를 관찰해 다음 행동을 결정하는 과정을 실제로 보여준다.
+`AUTONOMOUS_KAC_AGENT_VERIFIED`
 
-## 목표 실행 구조
+- Local Qwen `qwen2.5:14b-instruct-q4_K_M` 실제 추론
+- Ollama loopback 전용 연결과 model digest 기록
+- 출처가 연결된 CCS 그래프: 29 nodes / 31 edges
+- 실행 가능한 KAC 원자 스킬 6개
+- v2 Stage 산출물 60개 바이트 동일성 검증
+- 질문별 고정 route map 없음
+- 도구 행동·Observation·SkillRun·Verifier 전체 기록
+- SQLite 감사 기록과 파일 기반 run evidence
+- 실시간 실행 trace 웹 UI
+- 자동 테스트 13개와 실제 브라우저 PASS run
+
+최신 검증 snapshot은 [`proof/latest_verified_run.json`](proof/latest_verified_run.json), 실제 브라우저 검수 기록은 [`proof/browser_verification.json`](proof/browser_verification.json)에 있습니다.
+
+## 실제 실행 구조
 
 ```text
 사용자 질문
-  → Local Qwen Agent
-  → CCS 개념 관찰 / 관계 확장 / KAC Skill 실행
-  → Observation
-  → Qwen의 다음 행동 선택
-  ↺ 반복
-  → 근거·경계 검증
-  → 최종 답변 + 전체 행동 추적
+  ↓
+Local Qwen ── 다음 행동을 선택
+  ├─ observe_concept
+  ├─ expand_relations
+  ├─ invoke_kac_skill
+  ├─ request_missing_evidence
+  └─ submit_answer_candidate
+  ↓
+CCS Observation + 실제 KAC SkillRun
+  ↓
+Local Qwen이 다음 행동 재선택
+  ↓
+Verifier
+  ├─ anchor 관찰 여부
+  ├─ 관계 edge 연결 여부
+  ├─ SkillRun 존재 여부
+  ├─ claim ↔ evidence ↔ source 연결
+  └─ 금지된 개념 혼동 검사
+  ↓
+PASS claim만 최종 답변으로 조립
 ```
 
-## 현재 상태
+Qwen이 자연어를 반환하고 제출 도구 호출 형식에 실패할 때는 같은 로컬 Qwen의 JSON Schema 출력이 claim 직렬화만 담당합니다. 도메인 행동과 스킬 선택은 그대로 tool-calling Agent loop에서 이루어집니다.
 
-`FOUNDATION_READY` — 깨끗한 v3 저장소, 실행 계약, Agent 정책, Ollama/Qwen 사전점검 CLI와 검증 테스트가 준비된 상태입니다.
+## KAC 원자 스킬
 
-아직 주장하지 않는 것:
+| 스킬 | 실제 역할 |
+|---|---|
+| `esg-carbon-action-path` | ESG에서 측정·Scope·SDGs·시장·산림탄소까지 선행 행동 경로 실행 |
+| `scope-activity-classification` | 소유·통제·구매에너지·가치사슬 관계로 Scope 후보 판정 |
+| `carbon-market-unit-comparison` | CCM·VCM·배출권·크레딧·상쇄 축 분리 |
+| `forest-esg-impact-mapping` | 산림탄소의 E/S/G 근거와 공백 지도 생성 |
+| `forest-carbon-procedure-guidance` | 산림탄소 절차의 연속 증거와 다음 단계 판정 |
+| `forest-carbon-transaction-readiness` | 외부 거래 없이 11개 준비도 게이트 실행 |
 
-- 완성된 Agent loop
-- 전체 CCS 지식 그래프 import
-- KAC Skill 도구 등록 완료
-- 답변 정확성 또는 해커톤 제출 준비 완료
+각 스킬은 `Identity → Goal → Task → Knowledge → Method → Skill → SkillRuntime` 7개 계약으로 컴파일됩니다. 가져온 계약의 원본 commit과 SHA-256은 [`provenance/import_manifest.json`](provenance/import_manifest.json)에 기록되어 있습니다.
 
-## 기본 원칙
+## 실행하기
 
-- 질문별 고정 route map을 만들지 않습니다.
-- LLM의 도구 호출은 제안이며, 오케스트레이터가 허용 목록·입력 계약·예산을 검증한 뒤 실행합니다.
-- LLM이 지식이나 관계를 새로 주장할 수 없습니다. 관찰된 CCS 노드·관계·Skill 결과만 사용합니다.
-- 모든 개념 관찰, 관계 선택, Skill 호출, 결과, 검증 판정을 실행 기록으로 남깁니다.
-- 모델 ID·digest·prompt hash·tool call·observation·response hash를 보존합니다.
-- 최종 답변과 실제 Outcome을 구분합니다.
+요구 사항:
 
-## 시작하기
+- Python 3.9+
+- Ollama 0.32+
+- 로컬 모델 `qwen2.5:14b-instruct-q4_K_M`
 
 ```bash
-python3 -m unittest discover -s tests -v
-PYTHONPATH=src python3 -m supestar_kac_agent doctor \
-  --model qwen2.5:14b-instruct-q4_K_M
+cd /path/to/supestar-kac-agent
+python3 -m pip install -e .
+
+supestar-agent doctor
+supestar-agent serve --port 4177
 ```
 
-구현 기준은 다음 문서에 있습니다.
+브라우저에서 [http://127.0.0.1:4177](http://127.0.0.1:4177)을 엽니다.
+
+설치 없이 저장소 안에서 실행할 수도 있습니다.
+
+```bash
+PYTHONPATH=src python3 -m supestar_kac_agent doctor
+PYTHONPATH=src python3 -m supestar_kac_agent serve --port 4177
+```
+
+CLI 단일 질문 실행:
+
+```bash
+PYTHONPATH=src python3 -m supestar_kac_agent run \
+  --input tests/fixtures/esg_carbon_credit.json
+```
+
+## 검증하기
+
+```bash
+PYTHONPATH=src python3 -m unittest discover -s tests -v
+
+PYTHONPATH=src python3 scripts/verify_import.py \
+  --source-root /path/to/supestar_full_kac \
+  --target-root "$PWD"
+
+python3 scripts/verify_agent_run.py --run-dir runs/<PASS_RUN_ID>
+python3 scripts/verify_locality.py --run-dir runs/<PASS_RUN_ID>
+```
+
+실제 검증된 Scope run은 다음을 증명했습니다.
+
+- Qwen이 `OPERATIONAL_BOUNDARY`를 관찰
+- `scope-activity-classification`을 직접 선택·실행
+- `purchased_energy_type=NONE`으로 현장 연료 연소를 해석
+- `OPERATIONAL_BOUNDARY` 개념을 추가 관찰
+- 근거가 덜 연결된 후보를 여러 차례 차단
+- 최종 Scope 1 claim이 실제 SkillRun을 직접 인용한 뒤에만 `PASS`
+
+## 안전 경계와 한계
+
+- 외부 인터넷·검색·원격 LLM API를 사용하지 않습니다.
+- 결제·거래·등록부 변경을 실행하지 않습니다.
+- SQLite는 지식 DB가 아니라 run 감사 저장소입니다.
+- `knowledge/graph.json`은 벡터 RAG 문서 묶음이 아니라 도구로 관찰하는 CCS 환경입니다.
+- 현재 그래프는 29개 개념과 31개 관계 범위입니다. 모든 ESG 지식을 안다고 주장하지 않습니다.
+- Skill의 `PROCEED`는 코드 실행 완료이지 실제 사회·환경 Outcome의 발생을 뜻하지 않습니다.
+- 로컬 14.8B 모델이므로 한 질문에 수 분이 걸릴 수 있습니다.
+
+## 문서
 
 - [`docs/01_PRODUCT_INTENT.md`](docs/01_PRODUCT_INTENT.md)
 - [`docs/02_TARGET_ARCHITECTURE.md`](docs/02_TARGET_ARCHITECTURE.md)
 - [`docs/03_ACCEPTANCE_GATES.md`](docs/03_ACCEPTANCE_GATES.md)
 - [`docs/04_CLEAN_MIGRATION_BOUNDARY.md`](docs/04_CLEAN_MIGRATION_BOUNDARY.md)
+- [`docs/05_ACTUAL_RUNTIME_AND_PROOF.md`](docs/05_ACTUAL_RUNTIME_AND_PROOF.md)
+- [`docs/06_EXPLAIN_IT_SIMPLY.md`](docs/06_EXPLAIN_IT_SIMPLY.md)

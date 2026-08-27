@@ -1,0 +1,6 @@
+{
+  "type": "Goal",
+  "id": "goal:build-esg-carbon-action-path",
+  "derived_from": "identity:esg-management",
+  "objective": "ESG 책임을 측정·Scope·SDGs·감축·시장·산림탄소로 이어지는 최소 이유 경로로 바꾼다."
+}

@@ -1,0 +1,19 @@
+{
+  "type": "SkillRuntime",
+  "id": "runtime:forest-carbon-transaction-readiness:0.1.0",
+  "derived_from": "skill:forest-carbon-transaction-readiness",
+  "handler": "forest_carbon_transaction_readiness_v1",
+  "skill_interface": "eleven gate evidence states in; preparation decision out",
+  "input_contract": {"required": ["gates"], "gate_ids": ["G1", "G2", "G3", "G4", "G5", "G6", "G7", "G8", "G9", "G10", "G11"]},
+  "output_contract": {"required": ["verdict", "answer", "gate_results", "missing_evidence", "human_confirmation_targets"]},
+  "source_policy": "Official KOFPI procedure grounds process claims; project gate policy grounds only internal preparation controls.",
+  "tool_policy": "No payment, contract, registry, tax, legal, certification, retirement, or public-claim tool.",
+  "guardrail": "STOP outranks REVIEW; PROCEED means evidence preparation only.",
+  "validation_rule": "Exactly G1-G11 with PRESENT, MISSING, UNKNOWN, or NOT_APPLICABLE_WITH_REASON states.",
+  "trace_policy": "Record every gate input, policy verdict, and missing evidence item.",
+  "approval_policy": "Named humans and official institutions retain every external decision and action.",
+  "workflow_spec": ["validate", "evaluate_gates", "apply_priority", "render_output", "review", "feedback"],
+  "invocation_contract": "One immutable evidence snapshot per run; retries are new runs.",
+  "state_model": ["ADMITTED", "EXECUTED", "REVIEWED", "CLOSED_NO_CHANGE", "FEEDBACK_PENDING"],
+  "release_policy": "Gate-policy or handler changes require a new fingerprint and full fixture regression."
+}

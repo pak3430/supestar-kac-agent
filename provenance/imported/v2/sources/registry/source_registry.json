@@ -1,0 +1,62 @@
+{
+  "schema_version": "0.1.0",
+  "verified_at": "2026-08-27",
+  "sources": [
+    {
+      "id": "kac-official-repository",
+      "type": "official-framework",
+      "url": "https://github.com/sopia19910/Knowledge-Action-Chain",
+      "version_pin": "3c6a9e2f81db1b0eb7a90506444124baf0417a50",
+      "status": "VERIFIED",
+      "required_for_dci": true
+    },
+    {
+      "id": "ghg-protocol-corporate-standard-faq",
+      "type": "official-standard-guidance",
+      "url": "https://ghgprotocol.org/corporate-standard-frequently-asked-questions",
+      "snapshot_path": "sources/registry/official_source_claims_2026-08-27.json",
+      "status": "VERIFIED",
+      "required_for_dci": true
+    },
+    {
+      "id": "un-sustainable-development-goals",
+      "type": "official-intergovernmental-source",
+      "url": "https://sdgs.un.org/goals",
+      "snapshot_path": "sources/registry/official_source_claims_2026-08-27.json",
+      "status": "VERIFIED",
+      "required_for_dci": true
+    },
+    {
+      "id": "kofpi-forest-carbon-offset-program",
+      "type": "official-public-institution-source",
+      "url": "https://www.kofpi.or.kr/intro/bizGuide_04_02.do",
+      "snapshot_path": "sources/registry/official_source_claims_2026-08-27.json",
+      "status": "VERIFIED",
+      "required_for_dci": true
+    },
+    {
+      "id": "forest-carbon-transaction-gate-policy",
+      "type": "internal-control-policy",
+      "path": "sources/registry/forest_carbon_transaction_gate_policy.json",
+      "status": "VERIFIED_LOCAL",
+      "required_for_dci": true
+    },
+    {
+      "id": "supestar-stage-v1-derived-skill-contracts",
+      "type": "verified-stage-1-to-5-provenance",
+      "path": "provenance/stage_v1_import/derivation_manifest.json",
+      "source_repository": "https://github.com/pak3430/supestar-esg-ai",
+      "source_commit": "9b4b20ca03e64de8ee29eb512f186e69d73bcb8e",
+      "status": "VERIFIED_LOCAL",
+      "required_for_dci": true
+    },
+    {
+      "id": "forest-carbon-registry",
+      "type": "official-service",
+      "url": "https://carbonregistry.forest.go.kr/",
+      "status": "REGISTERED_NOT_ADMITTED",
+      "required_for_dci": false,
+      "note": "Service link is known but automated content verification failed on 2026-08-27; no pilot verdict relies on live registry data."
+    }
+  ]
+}

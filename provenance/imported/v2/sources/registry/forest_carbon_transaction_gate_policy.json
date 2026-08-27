@@ -1,0 +1,20 @@
+{
+  "policy_id": "forest-carbon-transaction-gate-policy",
+  "version": "0.1.0",
+  "authority_type": "internal-risk-control",
+  "boundary": "This policy checks evidence preparation only. It is not a legal, tax, certification, registry, payment, or transaction-validity decision.",
+  "priority": ["STOP", "REVIEW", "PROCEED"],
+  "gates": {
+    "G1": {"name": "parties", "missing_verdict": "STOP"},
+    "G2": {"name": "unit_identity_and_status", "missing_verdict": "STOP"},
+    "G3": {"name": "land_and_project_rights", "missing_verdict": "REVIEW"},
+    "G4": {"name": "disposition_right", "missing_verdict": "STOP"},
+    "G5": {"name": "eligibility_and_certification", "missing_verdict": "STOP"},
+    "G6": {"name": "buyer_purpose", "missing_verdict": "REVIEW"},
+    "G7": {"name": "contract", "missing_verdict": "STOP"},
+    "G8": {"name": "tax_review", "missing_verdict": "REVIEW"},
+    "G9": {"name": "payment_and_settlement", "missing_verdict": "STOP"},
+    "G10": {"name": "registry_transfer_or_use_status", "missing_verdict": "STOP"},
+    "G11": {"name": "evidence_pack_and_claim_approval", "missing_verdict": "REVIEW"}
+  }
+}

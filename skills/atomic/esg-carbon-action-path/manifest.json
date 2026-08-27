@@ -1,0 +1,7 @@
+{
+  "chain_id": "esg-carbon-action-path",
+  "version": "0.2.0",
+  "handler": "esg_carbon_action_path_v1",
+  "provenance_ref": "esg-carbon-action-path",
+  "nodes": ["identity.json", "goal.json", "task.json", "knowledge.json", "method.json", "skill.json", "runtime.json"]
+}

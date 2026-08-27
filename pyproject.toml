@@ -11,6 +11,7 @@ dependencies = []
 
 [project.scripts]
 supestar-agent = "supestar_kac_agent.cli:main"
+supestar-web = "supestar_kac_agent.server:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

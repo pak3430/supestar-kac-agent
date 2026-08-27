@@ -11,8 +11,8 @@
   "autonomy": {
     "question_specific_route_maps_allowed": false,
     "model_selects_next_action": true,
-    "max_steps": 8,
-    "max_tool_calls": 12,
+    "max_steps": 10,
+    "max_tool_calls": 16,
     "stop_on_unregistered_tool": true,
     "stop_on_unobserved_claim": true
   },

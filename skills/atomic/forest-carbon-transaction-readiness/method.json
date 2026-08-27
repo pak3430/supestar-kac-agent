@@ -1,0 +1,14 @@
+{
+  "type": "Method",
+  "id": "method:eleven-gate-priority-evaluation-v1",
+  "derived_from": "knowledge:forest-carbon-process-and-internal-gates-v1",
+  "runtime_handler": "forest_carbon_transaction_readiness_v1",
+  "policy_ref": "forest-carbon-transaction-gate-policy",
+  "rules": [
+    "G3 PRESENT is PROCEED, G3 MISSING is STOP, and G3 UNKNOWN or NOT_APPLICABLE_WITH_REASON is REVIEW.",
+    "G6, G8, or G11 non-PRESENT is REVIEW when no STOP exists.",
+    "G1, G2, G4, G5, G7, G9, or G10 non-PRESENT is STOP.",
+    "All gates PRESENT makes the preparation verdict PROCEED.",
+    "PROCEED never initiates or validates a transaction."
+  ]
+}

@@ -1,0 +1,1 @@
+{"type":"Skill","id":"skill:carbon-market-unit-comparison","derived_from":"method:axis-and-integrity-comparison-v1","name":"carbon-market-unit-comparison","interface":{"required":["question","purpose","asOfDate"],"optional":["unitType","registryStatus"]},"guardrails":["no_double_use","no_unverified_usage_claim","no_investment_advice"]}

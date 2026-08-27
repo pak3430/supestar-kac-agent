@@ -1,0 +1,1 @@
+{"chain_id":"forest-carbon-procedure-guidance","version":"0.1.0","handler":"forest_carbon_procedure_guidance_v1","provenance_ref":"forest-carbon-procedure-guidance","nodes":["identity.json","goal.json","task.json","knowledge.json","method.json","skill.json","runtime.json"]}

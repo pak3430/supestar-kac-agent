@@ -1,0 +1,1 @@
+{"type":"Skill","id":"skill:forest-carbon-procedure-guidance","derived_from":"method:contiguous-procedure-evidence-v1","name":"forest-carbon-procedure-guidance","interface":{"required":["projectType","currentStage","intendedUse","asOfDate"],"optional":["availableDocuments"]},"guardrails":["no_stage_inference","no_certification_finality","no_registry_mutation","no_transaction"]}

@@ -1,0 +1,33 @@
+{
+  "snapshot_id": "official-source-claims-2026-08-27",
+  "captured_at": "2026-08-27",
+  "capture_policy": "Paraphrased claim snapshot; the linked primary source remains authoritative.",
+  "sources": {
+    "ghg-protocol-corporate-standard-faq": {
+      "url": "https://ghgprotocol.org/corporate-standard-frequently-asked-questions",
+      "claim_url": "https://ghgptechassistance.zendesk.com/hc/en-us/articles/27680240285460-How-does-the-GHG-Protocol-define-and-categorize-emissions",
+      "verified_claims": [
+        "Scope 1 covers emissions from operations owned or controlled by the reporting company, including stationary combustion such as boilers.",
+        "Scope 2 covers generation of purchased or acquired electricity, steam, heating, or cooling consumed by the reporting company.",
+        "Scope 3 covers other indirect upstream and downstream value-chain emissions not included in scope 2.",
+        "The FAQ defers authoritative interpretation to the relevant GHG Protocol standards."
+      ]
+    },
+    "un-sustainable-development-goals": {
+      "url": "https://sdgs.un.org/goals",
+      "verified_claims": [
+        "The 2030 Agenda contains 17 Sustainable Development Goals and 169 targets.",
+        "The goals are integrated and indivisible across social, economic, and environmental dimensions.",
+        "Goal 13 concerns climate action and Goal 15 concerns terrestrial ecosystems and forests."
+      ]
+    },
+    "kofpi-forest-carbon-offset-program": {
+      "url": "https://www.kofpi.or.kr/intro/bizGuide_04_02.do",
+      "verified_claims": [
+        "KOFPI describes the forest carbon offset program as voluntary carbon-sink maintenance and enhancement activities whose additional removals are government-certified.",
+        "The public procedure separates project planning, review and registration, implementation and monitoring, verification, certification, and transaction or promotion stages.",
+        "The forest carbon registry is described as a system managing removals obtained through forest carbon offset projects."
+      ]
+    }
+  }
+}

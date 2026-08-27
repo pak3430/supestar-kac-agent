@@ -1,0 +1,1 @@
+{"chain_id":"forest-esg-impact-mapping","version":"0.1.0","handler":"forest_esg_impact_mapping_v1","provenance_ref":"forest-esg-impact-mapping","nodes":["identity.json","goal.json","task.json","knowledge.json","method.json","skill.json","runtime.json"]}

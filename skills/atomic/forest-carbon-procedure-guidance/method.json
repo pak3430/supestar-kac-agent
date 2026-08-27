@@ -1,0 +1,1 @@
+{"type":"Method","id":"method:contiguous-procedure-evidence-v1","derived_from":"knowledge:forest-carbon-official-sequence-v1","runtime_handler":"forest_carbon_procedure_guidance_v1","rules":["모든 단계의 증거 상태를 앞에서부터 확인한다.","가장 이른 미확인 선행단계를 blocked_stage로 둔다.","거래가능·사용완료·인증을 선행 증거 없이 확정하라는 요청은 STOP한다."]}

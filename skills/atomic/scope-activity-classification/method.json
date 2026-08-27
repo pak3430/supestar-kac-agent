@@ -1,0 +1,13 @@
+{
+  "type": "Method",
+  "id": "method:closed-scope-classification-v1",
+  "derived_from": "knowledge:ghg-scope-boundaries-v1",
+  "runtime_handler": "scope_activity_classification_v1",
+  "rules": {
+    "OWNED_CONTROLLED_AND_NO_PURCHASED_ENERGY": "SCOPE_1",
+    "PURCHASED_ENERGY": "SCOPE_2",
+    "NOT_OWNED_CONTROLLED_AND_UPSTREAM_OR_DOWNSTREAM": "SCOPE_3",
+    "UNKNOWN_OR_CONFLICT": "REVIEW",
+    "SCOPE_3_AS_SUM": "STOP"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "type": "SkillRuntime",
+  "id": "runtime:scope-activity-classification:0.1.0",
+  "derived_from": "skill:scope-activity-classification",
+  "handler": "scope_activity_classification_v1",
+  "skill_interface": "structured activity facts in; candidate classification out",
+  "input_contract": {"required": ["activity_description", "organization_boundary", "source_ownership_or_control", "purchased_energy_type", "value_chain_relation"]},
+  "output_contract": {"required": ["verdict", "answer", "candidate_scope", "rule_trace", "missing_evidence"]},
+  "source_policy": "Use only the admitted GHG Protocol source and chain rules.",
+  "tool_policy": "No network, calculator, emissions-factor lookup, or external action.",
+  "guardrail": "Do not infer missing relationships or calculate emissions.",
+  "validation_rule": "At most one candidate Scope; conflict yields REVIEW.",
+  "trace_policy": "Record every matched and rejected relation rule.",
+  "approval_policy": "Candidate classification is not inventory assurance and requires human confirmation for reporting.",
+  "workflow_spec": ["validate", "evaluate_relations", "resolve_conflict", "render_output", "review", "feedback"],
+  "invocation_contract": "One immutable activity snapshot per run.",
+  "state_model": ["ADMITTED", "EXECUTED", "REVIEWED", "CLOSED_NO_CHANGE", "FEEDBACK_PENDING"],
+  "release_policy": "Any Method or handler change creates a new runtime fingerprint and regression run."
+}

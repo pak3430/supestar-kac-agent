@@ -1,0 +1,7 @@
+{
+  "chain_id": "scope-activity-classification",
+  "version": "0.1.0",
+  "handler": "scope_activity_classification_v1",
+  "provenance_ref": "scope-activity-classification",
+  "nodes": ["identity.json", "goal.json", "task.json", "knowledge.json", "method.json", "skill.json", "runtime.json"]
+}

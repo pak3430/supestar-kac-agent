@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.0.0",
+  "verified_at": "2026-08-27",
+  "sources": [
+    {
+      "id": "supestar-stage-v2-contract-import",
+      "type": "sealed-stage-derived-contracts",
+      "path": "provenance/import_manifest.json",
+      "status": "VERIFIED_LOCAL"
+    },
+    {
+      "id": "supestar-stage-v1-derived-skill-contracts",
+      "type": "verified-stage-1-to-5-provenance",
+      "path": "provenance/imported/v2/provenance/stage_v1_import/derivation_manifest.json",
+      "status": "VERIFIED_LOCAL"
+    },
+    {
+      "id": "ghg-protocol-corporate-standard-faq",
+      "type": "official-standard-guidance",
+      "url": "https://ghgprotocol.org/corporate-standard-frequently-asked-questions",
+      "snapshot_path": "provenance/imported/v2/sources/registry/official_source_claims_2026-08-27.json",
+      "status": "VERIFIED"
+    },
+    {
+      "id": "un-sustainable-development-goals",
+      "type": "official-intergovernmental-source",
+      "url": "https://sdgs.un.org/goals",
+      "snapshot_path": "provenance/imported/v2/sources/registry/official_source_claims_2026-08-27.json",
+      "status": "VERIFIED"
+    },
+    {
+      "id": "kofpi-forest-carbon-offset-program",
+      "type": "official-public-institution-source",
+      "url": "https://www.kofpi.or.kr/intro/bizGuide_04_02.do",
+      "snapshot_path": "provenance/imported/v2/sources/registry/official_source_claims_2026-08-27.json",
+      "status": "VERIFIED"
+    },
+    {
+      "id": "forest-carbon-transaction-gate-policy",
+      "type": "internal-risk-control",
+      "path": "provenance/imported/v2/sources/registry/forest_carbon_transaction_gate_policy.json",
+      "status": "VERIFIED_LOCAL"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "object_type": "ManualBrowserVerificationRecord",
+  "captured_at": "2026-08-27T19:35:05+09:00",
+  "page": "http://127.0.0.1:4177/",
+  "browser_surface": "Codex In-app Browser",
+  "run_id": "agent-run-1550aabc-1b7b-469e-a5f8-a5b14717a092",
+  "visible_run_status": "PASS",
+  "visible_answer": "보일러에서 도시가스를 연소하는 배출원은 회사가 소유하고 직접 운영·통제하는 경우, 이 배출원은 Scope 1 후보입니다.",
+  "observed_static_assets": {
+    "scripts": [
+      "/assets/app.js"
+    ],
+    "styles": [
+      "/assets/style.css"
+    ],
+    "external_media_count": 0
+  },
+  "console_errors": [],
+  "note": "This records the browser inspection performed during implementation. Re-run the UI for independent verification."
+}

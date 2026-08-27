@@ -1,0 +1,38 @@
+{
+  "schema_version": "1.0.0",
+  "purpose": "Runtime input vocabulary exposed to Local Qwen; this is skill interface metadata, not a question route map.",
+  "skills": {
+    "esg-carbon-action-path": {
+      "userRole": ["LEARNER", "ESG_MANAGER", "FOREST_OWNER_OPERATOR", "REVIEWER"],
+      "focus": ["MEASUREMENT", "SCOPE", "SDGS", "MARKET", "FOREST_CARBON"],
+      "focus_meaning": "질문의 실제 종료점을 선택한다. 탄소시장·크레딧 관계는 MARKET, 산림탄소 절차는 FOREST_CARBON이다.",
+      "measurementEvidence": "시장 판단 선행조건이 실제 제공된 경우에만 넣는다. 없으면 생략해 REVIEW를 관찰한다."
+    },
+    "scope-activity-classification": {
+      "source_ownership_or_control": ["OWNED_CONTROLLED", "NOT_OWNED_CONTROLLED", "UNKNOWN"],
+      "purchased_energy_type": {
+        "allowed": ["ELECTRICITY", "STEAM", "HEAT", "COOLING", "NONE", "UNKNOWN"],
+        "meaning": "외부에서 구매해 소비한 전기·스팀·열·냉방만 해당한다. 소유·통제 보일러에서 도시가스 같은 연료를 직접 연소하면 NONE이다."
+      },
+      "value_chain_relation": ["UPSTREAM", "DOWNSTREAM", "NONE", "UNKNOWN"]
+    },
+    "carbon-market-unit-comparison": {
+      "purpose": ["REGULATORY_COMPLIANCE", "VOLUNTARY_TARGET", "CONTRIBUTION", "CLAIM_REVIEW", "LEARNING"],
+      "unitType": "실제 단위가 확인된 경우에만 입력한다.",
+      "registryStatus": "실제 등록·사용 상태가 확인된 경우에만 입력한다."
+    },
+    "forest-esg-impact-mapping": {
+      "environmentEvidence": "확인된 환경 근거 문자열 배열",
+      "socialEvidence": "확인된 사회·권리 근거 문자열 배열",
+      "governanceEvidence": "확인된 검증·책임·계약 근거 문자열 배열"
+    },
+    "forest-carbon-procedure-guidance": {
+      "currentStage": ["PLANNING", "ELIGIBILITY", "REGISTERED", "IMPLEMENTING", "MONITORING", "VERIFIED", "CERTIFIED", "USE", "REGISTRY_MANAGED", "UNKNOWN"],
+      "intendedUse": ["TRANSACTION", "NON_TRANSACTIONAL", "LEARNING", "UNDECIDED"],
+      "availableDocuments": "각 항목은 stage와 evidenceState(CONFIRMED, UNVERIFIED, MISSING)를 가진다."
+    },
+    "forest-carbon-transaction-readiness": {
+      "gates": "G1~G11 각각의 state를 PRESENT, UNKNOWN, MISSING, NOT_APPLICABLE_WITH_REASON 중 하나로 입력한다."
+    }
+  }
+}

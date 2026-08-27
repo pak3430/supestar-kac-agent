@@ -1,0 +1,34 @@
+{
+  "schema_version": "0.1.0",
+  "domain_context_id": "supestar-forest-esg",
+  "version": "0.1.0",
+  "status": "ACTIVE_PILOT",
+  "owner": "Supestar KAC project owner",
+  "authority": "Human ESG domain reviewer",
+  "human_accountability": "All public claims, legal or tax interpretations, payments, registry transfers, retirements, and context updates require named human approval.",
+  "sensitive_data_policy": "No personal, credential, payment, or confidential business data is admitted in the public pilot.",
+  "ccs": {
+    "purpose": "Help learners and ESG practitioners move from forest-ESG questions to traceable explanations and bounded preparation decisions.",
+    "meaning": "Supestar is an evidence-grounded forest-ESG guide; it is not a certification, legal, tax, assurance, trading, or payment authority.",
+    "situation": "Questions about ESG, SDGs, GHG scopes, forest-carbon procedure, and pre-transaction evidence readiness.",
+    "criteria": "Primary-source grounding, explicit boundaries, deterministic decision rules, provenance, and fail-closed review.",
+    "role": "Explain, classify candidates, expose missing evidence, and prepare human review.",
+    "limit": "No emissions calculation without approved factors; no legal/tax finality; no payment, transfer, retirement, or public-claim execution.",
+    "source": "Only entries admitted in sources/registry/source_registry.json may ground a runtime chain.",
+    "format": "Versioned machine-readable KAC objects plus human-readable answers and audit artifacts.",
+    "feedback": "Every run records no-change or a scoped feedback candidate; only approved candidates may create a new context version."
+  },
+  "dci": {
+    "verdict": "PASS",
+    "checked_at": "2026-08-27T00:00:00+09:00",
+    "fatal_checks": {
+      "owner_present": true,
+      "authority_present": true,
+      "human_accountability_present": true,
+      "sensitive_data_policy_present": true,
+      "source_policy_present": true,
+      "feedback_policy_present": true
+    },
+    "scope_note": "PASS applies only to the four registered atomic pilot chains, the skill-only chat orchestration boundary, and non-transactional local execution."
+  }
+}

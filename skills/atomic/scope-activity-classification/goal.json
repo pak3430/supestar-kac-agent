@@ -1,0 +1,6 @@
+{
+  "type": "Goal",
+  "id": "goal:classify-scope-candidate",
+  "derived_from": "identity:organizational-operational-boundary",
+  "objective": "경계와 활동 관계를 보존해 Scope 1·2·3 후보 또는 미해결 상태를 재현 가능하게 판정한다."
+}

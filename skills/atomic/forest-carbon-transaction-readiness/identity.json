@@ -1,0 +1,7 @@
+{
+  "type": "Identity",
+  "id": "identity:forest-carbon-transaction-evidence-pack",
+  "name": "FOREST_CARBON_TRANSACTION_EVIDENCE_PACK",
+  "meaning": "결제나 이전 전에 거래 주체·대상·권리·계약·세무 검토·정산·등록부 상태·주장 승인 증거를 묶는 준비도 객체",
+  "boundary": "증거 준비도는 거래 유효성, 법률·세무 의견, 인증 또는 결제 승인과 동일하지 않다."
+}

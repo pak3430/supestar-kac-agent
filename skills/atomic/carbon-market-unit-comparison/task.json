@@ -1,0 +1,1 @@
+{"type":"Task","id":"task:compare-carbon-market-units","derived_from":"goal:separate-market-unit-use-and-claim","inputs":["question","purpose","asOfDate","unitType","registryStatus"],"outputs":["concept_rows","claim_cautions","missing_evidence","verdict"]}

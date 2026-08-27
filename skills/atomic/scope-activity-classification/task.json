@@ -1,0 +1,7 @@
+{
+  "type": "Task",
+  "id": "task:evaluate-activity-boundary-relationship",
+  "derived_from": "goal:classify-scope-candidate",
+  "inputs": ["activity_description", "organization_boundary", "source_ownership_or_control", "purchased_energy_type", "value_chain_relation"],
+  "outputs": ["candidate_scope", "rule_trace", "missing_evidence", "verdict"]
+}

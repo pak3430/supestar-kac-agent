@@ -1,0 +1,1 @@
+{"type":"Method","id":"method:axis-and-integrity-comparison-v1","derived_from":"knowledge:carbon-market-comparison-axes-v1","runtime_handler":"carbon_market_unit_comparison_v1","rules":["학습 비교는 PROCEED한다.","실제 사용 가능성이나 등록 상태가 불명확하면 REVIEW한다.","이중사용이나 미확인 단위로 상쇄·탄소중립을 확정하면 STOP한다."]}

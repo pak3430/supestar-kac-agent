@@ -1,0 +1,7 @@
+{
+  "chain_id": "forest-carbon-transaction-readiness",
+  "version": "0.1.0",
+  "handler": "forest_carbon_transaction_readiness_v1",
+  "provenance_ref": "forest-carbon-transaction-readiness",
+  "nodes": ["identity.json", "goal.json", "task.json", "knowledge.json", "method.json", "skill.json", "runtime.json"]
+}

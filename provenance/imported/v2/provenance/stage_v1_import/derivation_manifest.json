@@ -1,0 +1,134 @@
+{
+  "schema_version": "1.0.0",
+  "verified_at": "2026-08-27",
+  "source_repository": "https://github.com/pak3430/supestar-esg-ai",
+  "source_commit": "9b4b20ca03e64de8ee29eb512f186e69d73bcb8e",
+  "stage_run": {
+    "run_id": "forest_esg_concept_v1_20260821_164823",
+    "verification_status": "SEALED_PASS",
+    "verification_path": "ccs_authoring/supestar_mvp_v3/_artifact/stage_1_to_5_post_execution_verification.json",
+    "verification_snapshot_path": "provenance/stage_v1_import/snapshots/stage_1_to_5_post_execution_verification.json",
+    "verification_source_sha256": "31c88cf73690b47e66adb3cd914c19932d504b6c65b96ddc75b93cc8efcc4d1c",
+    "verification_snapshot_sha256": "9a716672155146f11bd0df7bfbd5e4f897b0e9e00b19af1fa177dd7fd16b6382",
+    "candidate_count": 85,
+    "minted_pass_count": 85
+  },
+  "chains": {
+    "supestar-question-routing": {
+      "status": "SEALED_PASS",
+      "identity_candidate": "USER_QUESTION",
+      "closure_path": "ccs_authoring/supestar_mvp_v3/_artifact/stage4_079_user_question_concept_to_skill_closure_artifact.md",
+      "closure_snapshot_path": "provenance/stage_v1_import/snapshots/stage4_079_user_question_closure.md",
+      "closure_source_sha256": "c5717f602a26f0e07952dbf78e7e579959d358c263de459b6518162ce789bb94",
+      "closure_snapshot_sha256": "eec102b1bce373a790e53bf9067add9a6ef7565a4f6296246aedad5382712544",
+      "source_files": [
+        {"role": "Identity", "path": "ccs_authoring/supestar_mvp_v3/_identity/USER_QUESTION.md", "sha256": "80bc374f5626c442f20e3d0c6f94d74e5481f84d0a8edb15544a054454f73790"},
+        {"role": "Goal", "path": "ccs_authoring/supestar_mvp_v3/_goal/supestar_question_routing_goal.md", "sha256": "c7f1e58bad44a0b730a5d42bb7a3fde19c7799a2267a6ab990655d57e5351c2e"},
+        {"role": "Task", "path": "ccs_authoring/supestar_mvp_v3/_task/supestar_question_routing_task.md", "sha256": "17ec075c10bf5224210a91d71d8b6d46a73e592a5f54cc2286fae44af0c16e5a"},
+        {"role": "Knowledge", "path": "ccs_authoring/supestar_mvp_v3/_knowledge/supestar_question_routing_knowledge.md", "sha256": "51c65f60d167aec547178745d1ae98bc462ff6688a17bd0e07d906a243d6cf7b"},
+        {"role": "Method", "path": "ccs_authoring/supestar_mvp_v3/_method/supestar_question_routing_method.md", "sha256": "ddb803d27584dcf5c0cb963dcf9bfc6b3ae7ceeaaf15a03ea4e81a0442f8a7a5"},
+        {"role": "Skill", "path": "ccs_authoring/supestar_mvp_v3/_skill/supestar-question-routing/SKILL.md", "sha256": "f01a33b73769801aff7137c74d2ff061d519dd952df3d874be7c0bf2120e6e64"}
+      ]
+    },
+    "esg-carbon-action-path": {
+      "status": "SEALED_PASS",
+      "identity_candidate": "ESG_MANAGEMENT",
+      "closure_path": "ccs_authoring/supestar_mvp_v3/_artifact/stage4_005_esg_management_concept_to_skill_closure_artifact.md",
+      "closure_snapshot_path": "provenance/stage_v1_import/snapshots/stage4_005_esg_management_closure.md",
+      "closure_source_sha256": "d8d02b9cbc2193010f821b6fdced1c4a237804ddae36250b064782f150b651ad",
+      "closure_snapshot_sha256": "a3395643fea58646ea08d25628a2a7e175f7bc1dcfd1e9d254c9d7451398e302",
+      "source_files": [
+        {"role": "Identity", "path": "ccs_authoring/supestar_mvp_v3/_identity/ESG_MANAGEMENT.md", "sha256": "d5fa1c23264f2a8e6f37b61c242fcc560f9a6f26d08a7e313d75fa38ab42d243"},
+        {"role": "Goal", "path": "ccs_authoring/supestar_mvp_v3/_goal/esg_carbon_action_path_goal.md", "sha256": "cf4793634b4e2e2e6eb4c9ebc3838d4bb5d6cb8e9e68f0d5e5f5e440ef490e89"},
+        {"role": "Task", "path": "ccs_authoring/supestar_mvp_v3/_task/esg_carbon_action_path_task.md", "sha256": "ad3c202b5f8ec4bb4956656c093d397a73452eccbf5af18369a63ed1fb1ed8b9"},
+        {"role": "Knowledge", "path": "ccs_authoring/supestar_mvp_v3/_knowledge/esg_carbon_action_path_knowledge.md", "sha256": "96f18fae94712f3f5a9df0a41d1e770026b08e88c4ff5c4c3260bbe342d07898"},
+        {"role": "Method", "path": "ccs_authoring/supestar_mvp_v3/_method/esg_carbon_action_path_method.md", "sha256": "94d3514f31a6c3648fb060308288334db8d7c1a5a8d2623bd0ddaad36b7812cd"},
+        {"role": "Skill", "path": "ccs_authoring/supestar_mvp_v3/_skill/esg-carbon-action-path/SKILL.md", "sha256": "7d11f737c259860d89a7935304aabd9ccae0f7def76845dadf4e89f9c994a44d"}
+      ]
+    },
+    "scope-activity-classification": {
+      "status": "SEALED_PASS",
+      "identity_candidate": "ORGANIZATIONAL_BOUNDARY",
+      "closure_path": "ccs_authoring/supestar_mvp_v3/_artifact/stage4_007_organizational_boundary_concept_to_skill_closure_artifact.md",
+      "closure_snapshot_path": "provenance/stage_v1_import/snapshots/stage4_007_organizational_boundary_closure.md",
+      "closure_source_sha256": "6b2f85e09471770d9b25ad72fda1dc6773400dfffaac11ad615e5f139cf296a9",
+      "closure_snapshot_sha256": "26ff9ef7dd5ac02a3b6bbf0ff0486f5af359cec5b7a2968f0a539032e4f8fe6f",
+      "source_files": [
+        {"role": "Identity", "path": "ccs_authoring/supestar_mvp_v3/_identity/ORGANIZATIONAL_BOUNDARY.md", "sha256": "42869bdccb7df56d0f4bb16b773ea58ac4a48d479bea0e82381d13d56fa84404"},
+        {"role": "Goal", "path": "ccs_authoring/supestar_mvp_v3/_goal/scope_activity_classification_goal.md", "sha256": "badc8fff787510f15460db3ce3695538ca5c9d392f1ffc489d32044342c55b77"},
+        {"role": "Task", "path": "ccs_authoring/supestar_mvp_v3/_task/scope_activity_classification_task.md", "sha256": "c849b1183e8da36566059f51acbfb0d1e8fffa9650bb23cb5f9aa7d0c1405eb9"},
+        {"role": "Knowledge", "path": "ccs_authoring/supestar_mvp_v3/_knowledge/scope_activity_classification_knowledge.md", "sha256": "6cee2a7ecaa1ad0db7bfd5fdef91032f692bceafdd45ebe35d151dd913a02409"},
+        {"role": "Method", "path": "ccs_authoring/supestar_mvp_v3/_method/scope_activity_classification_method.md", "sha256": "0573083ebe4e2cdba4077398f151e4c7137605596082d0a9282bc6f982f60728"},
+        {"role": "Skill", "path": "ccs_authoring/supestar_mvp_v3/_skill/scope-activity-classification/SKILL.md", "sha256": "04c6338a2773a7410e96faffa7f2fc5969ee742b62693711f7be8605b40d6b39"}
+      ]
+    },
+    "carbon-market-unit-comparison": {
+      "status": "SEALED_PASS",
+      "identity_candidate": "CLIMATE_CLAIM",
+      "closure_path": "ccs_authoring/supestar_mvp_v3/_artifact/stage4_031_climate_claim_concept_to_skill_closure_artifact.md",
+      "closure_snapshot_path": "provenance/stage_v1_import/snapshots/stage4_031_climate_claim_closure.md",
+      "closure_source_sha256": "c83791fc604a235f29c452ad196791b501fd9276ab341853d1b3badccc7f7fdd",
+      "closure_snapshot_sha256": "f230c99237f528f56a9bc2fe1e149de1ee9ffc5c7765d26cb5428c4ac3225505",
+      "source_files": [
+        {"role": "Identity", "path": "ccs_authoring/supestar_mvp_v3/_identity/CLIMATE_CLAIM.md", "sha256": "c4e0a6d99d5bf94d9ba03a1988cc39c9aa664d0a4cb087a5f0953d1063adc2c5"},
+        {"role": "Goal", "path": "ccs_authoring/supestar_mvp_v3/_goal/carbon_market_unit_comparison_goal.md", "sha256": "fa8a6d6e6737f6c9577ff2259953cf3b48162b42dec50a69700dbce4fd9dc252"},
+        {"role": "Task", "path": "ccs_authoring/supestar_mvp_v3/_task/carbon_market_unit_comparison_task.md", "sha256": "fe77735d40748bc8db5385770a0426b0ee5bdb7a935bae15af3f146af89713ad"},
+        {"role": "Knowledge", "path": "ccs_authoring/supestar_mvp_v3/_knowledge/carbon_market_unit_comparison_knowledge.md", "sha256": "0e18cc0803325fa022126939517e64abaa87d959b29e98ebda76cf37987e9911"},
+        {"role": "Method", "path": "ccs_authoring/supestar_mvp_v3/_method/carbon_market_unit_comparison_method.md", "sha256": "ef2964c8cdaee9dd6104139e0d04a3fb4d71249d3f129dd97dd476ea9d066d4a"},
+        {"role": "Skill", "path": "ccs_authoring/supestar_mvp_v3/_skill/carbon-market-unit-comparison/SKILL.md", "sha256": "61507877fe1ff16752aceed1330d03f0a0eadf7ceeebd0fd2f54e6d27335c910"}
+      ]
+    },
+    "forest-esg-impact-mapping": {
+      "status": "SEALED_PASS",
+      "identity_candidate": "FOREST_CARBON_PROJECT",
+      "closure_path": "ccs_authoring/supestar_mvp_v3/_artifact/stage4_034_forest_carbon_project_concept_to_skill_closure_artifact.md",
+      "closure_snapshot_path": "provenance/stage_v1_import/snapshots/stage4_034_forest_carbon_project_closure.md",
+      "closure_source_sha256": "b62c1b1edbaf550048203dcd392a2a23cc91928cf9dc4fecccbe7daccd674220",
+      "closure_snapshot_sha256": "73fae5366f91ab349ab57a60b563ba4b3c04be0354a4410a2dc4447b3b9e9ba1",
+      "source_files": [
+        {"role": "Identity", "path": "ccs_authoring/supestar_mvp_v3/_identity/FOREST_CARBON_PROJECT.md", "sha256": "5c5b967b75c3d7ce77c00a77a7b1b1642c78886397199b73ef486f65722b893e"},
+        {"role": "Goal", "path": "ccs_authoring/supestar_mvp_v3/_goal/forest_esg_impact_mapping_goal.md", "sha256": "c7aaca323df9b978aa8b74d6adb27cfc8ab4f1356230555f6eb1fc07431e1891"},
+        {"role": "Task", "path": "ccs_authoring/supestar_mvp_v3/_task/forest_esg_impact_mapping_task.md", "sha256": "0bef683a94a947ba373b596873568963bfef8262c40ca8b6824a4b234b67ba5f"},
+        {"role": "Knowledge", "path": "ccs_authoring/supestar_mvp_v3/_knowledge/forest_esg_impact_mapping_knowledge.md", "sha256": "b0bc645aaac6f781a7d9b14f83561cfa421652049db3be0822aaafa46b0ea601"},
+        {"role": "Method", "path": "ccs_authoring/supestar_mvp_v3/_method/forest_esg_impact_mapping_method.md", "sha256": "ac0961e8d485e5da6549ea4a180c5d35c8dd042c2c749a1998f314ef76bce592"},
+        {"role": "Skill", "path": "ccs_authoring/supestar_mvp_v3/_skill/forest-esg-impact-mapping/SKILL.md", "sha256": "d7b8aa1979267cad9a8104b03b6e0072a9f1b269605bb6b7a74eea15be0b7904"}
+      ]
+    },
+    "forest-carbon-procedure-guidance": {
+      "status": "SEALED_PASS",
+      "identity_candidate": "FOREST_CARBON_PROJECT",
+      "closure_path": "ccs_authoring/supestar_mvp_v3/_artifact/stage4_034_forest_carbon_project_concept_to_skill_closure_artifact.md",
+      "closure_snapshot_path": "provenance/stage_v1_import/snapshots/stage4_034_forest_carbon_project_closure.md",
+      "closure_source_sha256": "b62c1b1edbaf550048203dcd392a2a23cc91928cf9dc4fecccbe7daccd674220",
+      "closure_snapshot_sha256": "73fae5366f91ab349ab57a60b563ba4b3c04be0354a4410a2dc4447b3b9e9ba1",
+      "source_files": [
+        {"role": "Identity", "path": "ccs_authoring/supestar_mvp_v3/_identity/FOREST_CARBON_PROJECT.md", "sha256": "5c5b967b75c3d7ce77c00a77a7b1b1642c78886397199b73ef486f65722b893e"},
+        {"role": "Goal", "path": "ccs_authoring/supestar_mvp_v3/_goal/forest_carbon_procedure_guidance_goal.md", "sha256": "c043f20b03b0508b585f4816abfe89cb2d317d03e9a327cd49111c16bcbf301e"},
+        {"role": "Task", "path": "ccs_authoring/supestar_mvp_v3/_task/forest_carbon_procedure_guidance_task.md", "sha256": "263d9067cf221752d7a96832bbb8347a6912f3ea9bb2ead841fcaa50cee1de05"},
+        {"role": "Knowledge", "path": "ccs_authoring/supestar_mvp_v3/_knowledge/forest_carbon_procedure_guidance_knowledge.md", "sha256": "8a897d3f8a698257dfa0d6edeadfc7ceffcbb388191754f1999320dd0e7f478a"},
+        {"role": "Method", "path": "ccs_authoring/supestar_mvp_v3/_method/forest_carbon_procedure_guidance_method.md", "sha256": "d11d7e632fc39afb5b876511d7ecf0c870ac94eddaef6ba16abb4bae83b1d59b"},
+        {"role": "Skill", "path": "ccs_authoring/supestar_mvp_v3/_skill/forest-carbon-procedure-guidance/SKILL.md", "sha256": "7bed580a8ca0bc4483c15eb1c9378f5923fe9ffa91d11fa7410a2473d5c8ce99"}
+      ]
+    },
+    "forest-carbon-transaction-readiness": {
+      "status": "SEALED_PASS",
+      "identity_candidate": "TRANSACTION_EVIDENCE_PACK",
+      "closure_path": "ccs_authoring/supestar_mvp_v3/_artifact/stage4_061_transaction_evidence_pack_concept_to_skill_closure_artifact.md",
+      "closure_snapshot_path": "provenance/stage_v1_import/snapshots/stage4_061_transaction_evidence_pack_closure.md",
+      "closure_source_sha256": "c68ee6aaf632e3ef0f04f9ee3e2e8661819f15023b741c0f8bf59147d797bf23",
+      "closure_snapshot_sha256": "ad421ed19fe88f4916d5eff2048849c4d526ca2b46bc553177a295ec2227eeba",
+      "grounding_approval_path": "ccs_authoring_runs/2026-08-21_transaction_evidence_grounding_v1/GROUNDING_APPROVAL_RECORD.md",
+      "grounding_approval_snapshot_path": "provenance/stage_v1_import/snapshots/transaction_evidence_grounding_approval.md",
+      "grounding_approval_source_sha256": "d357a6e3ee588eace961fba3736a0392e2458656fe14d918eb3752c85ac8895c",
+      "grounding_approval_snapshot_sha256": "858bd449b39a9900034b039a029a52527cca9523f01b31c3602703ad22588632",
+      "source_files": [
+        {"role": "Identity", "path": "ccs_authoring/supestar_mvp_v3/_identity/TRANSACTION_EVIDENCE_PACK.md", "sha256": "07284304b240a80d4398a883e4e40542e7fa1148df5308684089b292e3497d02"},
+        {"role": "Goal", "path": "ccs_authoring/supestar_mvp_v3/_goal/forest_carbon_transaction_readiness_goal.md", "sha256": "cc9de9afe0d503c671a647c01e4a3c374175c3aec72c6ae44fa8e49b24ab7523"},
+        {"role": "Task", "path": "ccs_authoring/supestar_mvp_v3/_task/forest_carbon_transaction_readiness_task.md", "sha256": "9d163d1d13c5237a527495f2bfc02fd059df0f101a9c89292d9047dc578a6bc5"},
+        {"role": "Knowledge", "path": "ccs_authoring/supestar_mvp_v3/_knowledge/forest_carbon_transaction_readiness_knowledge.md", "sha256": "ff52b91d3f833276589ff91b6467eb0b38417ba71f0f074b8ecf6702335b2c96"},
+        {"role": "Method", "path": "ccs_authoring/supestar_mvp_v3/_method/forest_carbon_transaction_readiness_method.md", "sha256": "f82a26be824d150edf579aec3505f42e6790b7b77c76b2910afc9e0f8eba45c2"},
+        {"role": "Skill", "path": "ccs_authoring/supestar_mvp_v3/_skill/forest-carbon-transaction-readiness/SKILL.md", "sha256": "f29fa93c5cd36fd02316d439cadbedbd2083fbcb62c20c41c1f8668f73106576"}
+      ]
+    }
+  }
+}

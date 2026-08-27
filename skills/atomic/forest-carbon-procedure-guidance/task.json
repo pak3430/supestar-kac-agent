@@ -1,0 +1,1 @@
+{"type":"Task","id":"task:evaluate-procedure-evidence-prefix","derived_from":"goal:guide-next-forest-carbon-procedure","inputs":["projectType","currentStage","availableDocuments","intendedUse","asOfDate"],"outputs":["completed_stages","blocked_stage","next_stage","required_artifacts","verdict"]}

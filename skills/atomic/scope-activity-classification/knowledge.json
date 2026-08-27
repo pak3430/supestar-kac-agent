@@ -1,0 +1,12 @@
+{
+  "type": "Knowledge",
+  "id": "knowledge:ghg-scope-boundaries-v1",
+  "derived_from": "task:evaluate-activity-boundary-relationship",
+  "source_refs": ["ghg-protocol-corporate-standard-faq"],
+  "claims": [
+    "Scope 1은 조직이 소유하거나 통제하는 배출원의 직접배출 후보다.",
+    "Scope 2는 구매해 소비한 전기·스팀·열·냉방 생산의 간접배출 후보를 다룬다.",
+    "Scope 3는 Scope 2 외 상·하류 가치사슬의 기타 간접배출 후보를 다룬다.",
+    "Scope 3는 Scope 1과 Scope 2의 합이 아니다."
+  ]
+}

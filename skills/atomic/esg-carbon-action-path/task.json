@@ -1,0 +1,7 @@
+{
+  "type": "Task",
+  "id": "task:select-minimum-esg-carbon-path",
+  "derived_from": "goal:build-esg-carbon-action-path",
+  "inputs": ["question", "userRole", "asOfDate", "focus"],
+  "outputs": ["ordered_nodes", "reason_per_edge", "next_action", "evidence_refs", "missing_evidence"]
+}
