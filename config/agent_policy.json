@@ -1,0 +1,40 @@
+{
+  "schema_version": "1.0.0",
+  "agent_mode": "LOCAL_LLM_BOUNDED_KAC_LOOP",
+  "local_llm": {
+    "required": true,
+    "default_endpoint": "http://127.0.0.1:11434",
+    "default_model": "qwen2.5:14b-instruct-q4_K_M",
+    "require_tool_capability": true,
+    "record_model_identity": true
+  },
+  "autonomy": {
+    "question_specific_route_maps_allowed": false,
+    "model_selects_next_action": true,
+    "max_steps": 8,
+    "max_tool_calls": 12,
+    "stop_on_unregistered_tool": true,
+    "stop_on_unobserved_claim": true
+  },
+  "allowed_tools": [
+    "observe_concept",
+    "expand_relations",
+    "invoke_kac_skill",
+    "request_missing_evidence",
+    "submit_answer_candidate"
+  ],
+  "verification": {
+    "require_anchor_coverage": true,
+    "require_observed_edge_for_relationship_claim": true,
+    "require_skill_output_for_domain_decision": true,
+    "require_source_refs": true,
+    "separate_output_from_outcome": true
+  },
+  "trace": {
+    "record_prompt_hash": true,
+    "record_model_digest": true,
+    "record_tool_arguments": true,
+    "record_observations": true,
+    "record_answer_hash": true
+  }
+}
