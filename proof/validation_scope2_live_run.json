@@ -1,0 +1,70 @@
+{
+  "answer": "외부 전력회사에서 구매한 전기를 사무실에서 사용하는 활동은 Scope 2 후보입니다.",
+  "event_count": 23,
+  "internet_used": false,
+  "llm_called": true,
+  "local_llm_verified": true,
+  "model_identity": {
+    "capabilities": [
+      "completion",
+      "tools"
+    ],
+    "endpoint": "http://127.0.0.1:11434",
+    "endpoint_scope": "LOOPBACK_ONLY",
+    "family": "qwen2",
+    "model": "qwen2.5:14b-instruct-q4_K_M",
+    "model_digest": "7cdf5a0187d5c58cc5d369b255592f7841d1c4696d45a8c8a9489440385b22f6",
+    "ollama_version": "0.32.1",
+    "parameter_size": "14.8B",
+    "provider": "OLLAMA_LOCAL",
+    "quantization_level": "Q4_K_M"
+  },
+  "note": "This is a non-secret evidence snapshot. Full transient runs and SQLite state remain gitignored.",
+  "object_type": "VerifiedRunProofSnapshot",
+  "observed_evidence_ids": [
+    "concept:OPERATIONAL_BOUNDARY",
+    "skill:scope-activity-classification:latest",
+    "skill:skill-run-40346443-275b-4248-a3e9-f04e4ddad975"
+  ],
+  "question": "우리 회사가 외부 전력회사에서 구매한 전기를 사무실에서 사용합니다. 이 활동은 Scope 몇인가요?",
+  "question_specific_route_map_used": false,
+  "run_id": "agent-run-d4b3d7d3-9136-4b35-9437-a0d98ab485cf",
+  "skill_run_ids": [
+    "skill-run-40346443-275b-4248-a3e9-f04e4ddad975"
+  ],
+  "skills_invoked": [
+    "scope-activity-classification"
+  ],
+  "source_run_manifest_sha256": "659e002f905a5802abbbc7bea9d8296f7c688d18d99dfb3ace5b1417f92c07dc",
+  "stop_reason": "ANSWER_CANDIDATE_VERIFIED",
+  "verification": {
+    "anchor_ids": [
+      "OPERATIONAL_BOUNDARY"
+    ],
+    "cited_evidence_ids": [
+      "concept:OPERATIONAL_BOUNDARY",
+      "skill:scope-activity-classification:latest"
+    ],
+    "cited_skill_run_ids": [
+      "skill-run-40346443-275b-4248-a3e9-f04e4ddad975"
+    ],
+    "executed_skill_names": [
+      "scope-activity-classification"
+    ],
+    "forbidden_confusions": [],
+    "missing_requirements": [],
+    "observed_concept_ids": [
+      "OPERATIONAL_BOUNDARY"
+    ],
+    "observed_edge_ids": [],
+    "repair_evidence_by_concept": {},
+    "source_refs": [
+      "ghg-protocol-corporate-standard-faq",
+      "supestar-stage-v2-contract-import"
+    ],
+    "uncovered_claim_concepts": {},
+    "unsupported_evidence_ids": [],
+    "verdict": "PASS",
+    "verified_answer": "외부 전력회사에서 구매한 전기를 사무실에서 사용하는 활동은 Scope 2 후보입니다."
+  }
+}

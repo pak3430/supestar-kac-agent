@@ -14,6 +14,7 @@ from .graph import KnowledgeGraph
 from .ollama_client import OllamaClient
 from .policy import load_policy, project_root
 from .skill_compiler import skill_catalog
+from .validation_bank import public_question_bank
 
 
 def _json_bytes(value: Any) -> bytes:
@@ -61,6 +62,9 @@ class SupestarHandler(BaseHTTPRequestHandler):
         if path == "/api/graph":
             graph = KnowledgeGraph(self.server.root)
             self._send_json(200, {"fingerprint":graph.fingerprint, **graph.data})
+            return
+        if path == "/api/validation-questions":
+            self._send_json(200, public_question_bank(self.server.root))
             return
         if path == "/api/runs":
             manifests = []

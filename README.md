@@ -17,9 +17,9 @@ Local Qwen이 CCS 지식을 관찰하고 관계를 확장한 뒤, Stage 1~5에�
 - 도구 행동·Observation·SkillRun·Verifier 전체 기록
 - SQLite 감사 기록과 파일 기반 run evidence
 - 실시간 실행 trace 웹 UI
-- 자동 테스트 13개와 실제 브라우저 PASS run
+- 자동 테스트 16개, 계약 검증 질문 20개와 실제 브라우저 PASS run
 
-최신 검증 snapshot은 [`proof/latest_verified_run.json`](proof/latest_verified_run.json), 실제 브라우저 검수 기록은 [`proof/browser_verification.json`](proof/browser_verification.json)에 있습니다.
+최신 검증 snapshot은 [`proof/latest_verified_run.json`](proof/latest_verified_run.json), 실제 브라우저 검수 기록은 [`proof/browser_verification.json`](proof/browser_verification.json)에 있습니다. 새 질문 은행의 구매 전력 질문을 Local Qwen으로 실행한 Scope 2 PASS 증거는 [`proof/validation_scope2_live_run.json`](proof/validation_scope2_live_run.json)입니다.
 
 ## 실제 실행 구조
 
@@ -48,6 +48,10 @@ PASS claim만 최종 답변으로 조립
 ```
 
 Qwen이 자연어를 반환하고 제출 도구 호출 형식에 실패할 때는 같은 로컬 Qwen의 JSON Schema 출력이 claim 직렬화만 담당합니다. 도메인 행동과 스킬 선택은 그대로 tool-calling Agent loop에서 이루어집니다.
+
+스킬 실행 전 자연어로 이탈하면 같은 로컬 Qwen의 구조화 행동 어댑터가 현재 lifecycle gate에서 허용된 도구 하나를 다시 선택합니다. 런타임은 `관찰 → 스킬 실행 → 관계 확인 → 제출`의 공통 전제만 제한하며, 구체적인 개념·스킬·입력은 Qwen이 선택합니다. 질문별 route map은 만들지 않습니다.
+
+Qwen의 claim 내용은 맞지만 이미 관찰한 개념 evidence ID만 빠진 경우, 검증기가 제안한 정확한 `concept:*` ID만 기계적으로 추가해 다시 검증합니다. 이 복구는 문장·판정·지식을 수정하지 않으며, 미관찰 근거·잘못된 내용·금지된 혼동은 자동 보정하지 않습니다.
 
 ## KAC 원자 스킬
 
@@ -99,6 +103,9 @@ PYTHONPATH=src python3 -m supestar_kac_agent run \
 ```bash
 PYTHONPATH=src python3 -m unittest discover -s tests -v
 
+# 20개 질문의 anchor·원자 스킬·PROCEED/REVIEW/STOP 계약 일괄 검증
+PYTHONPATH=src python3 scripts/validate_question_bank.py
+
 PYTHONPATH=src python3 scripts/verify_import.py \
   --source-root /path/to/supestar_full_kac \
   --target-root "$PWD"
@@ -115,6 +122,8 @@ python3 scripts/verify_locality.py --run-dir runs/<PASS_RUN_ID>
 - `OPERATIONAL_BOUNDARY` 개념을 추가 관찰
 - 근거가 덜 연결된 후보를 여러 차례 차단
 - 최종 Scope 1 claim이 실제 SkillRun을 직접 인용한 뒤에만 `PASS`
+
+웹 화면의 **검증 질문 더 보기**에는 개념 관계, Scope 1·2·3, 탄소시장, 산림탄소, 거래·안전 질문이 들어 있습니다. 원본은 [`validation/question_bank.json`](validation/question_bank.json)입니다. 이 파일은 예시와 회귀 검증 전용이며 Agent 답변 입력이나 질문별 route map으로 사용되지 않습니다.
 
 ## 안전 경계와 한계
 

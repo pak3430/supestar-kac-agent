@@ -41,6 +41,14 @@
           <button type="button" data-question="우리 회사가 소유하고 직접 운영·통제하는 사업장 보일러에서 도시가스를 연소합니다. 이 배출원은 Scope 몇인가요?">보일러 Scope 분류</button>
           <button type="button" data-question="산림탄소사업은 ESG와 SDGs에 어떻게 연결됩니까?">산림탄소 × ESG × SDGs</button>
         </div>
+        <details class="validation-library">
+          <summary>
+            <span>검증 질문 더 보기</span>
+            <small id="validationCount">불러오는 중…</small>
+          </summary>
+          <p class="validation-note">각 질문은 CCS anchor와 원자 스킬 계약의 서로 다른 경계를 확인합니다. 표시된 기대값은 <strong>스킬 판정</strong>이며 최종 답변 공개 여부와는 별도입니다.</p>
+          <div id="validationQuestions" class="validation-groups" aria-live="polite"></div>
+        </details>
         <div id="conversation" class="conversation" aria-live="polite">
           <div class="welcome-card">
             <strong>고정 답변이 아닙니다.</strong>

@@ -116,6 +116,55 @@ class StructuredFallbackQwen:
             "metrics": {"phase": "candidate_structuring", "client_elapsed_ms": 1.0},
         }
 
+
+class ActionRecoveryQwen:
+    def __init__(self) -> None:
+        self.turn = 0
+        self.recovered = False
+
+    def identity(self) -> dict:
+        return ScriptedLocalQwen().identity()
+
+    def chat(self, messages: list[dict], tools: list[dict]) -> dict:
+        turns = [
+            [tool_call("observe_concept", {"concept": "OPERATIONAL_BOUNDARY"})],
+            [],
+            [tool_call("submit_answer_candidate", {
+                "answer": "외부에서 구매해 소비한 전기는 Scope 2 후보입니다.",
+                "claims": [{
+                    "text": "외부에서 구매해 소비한 전기는 Scope 2 후보입니다.",
+                    "evidence_ids": ["skill:scope-activity-classification:latest"],
+                }],
+            })],
+        ]
+        calls = turns[self.turn]
+        self.turn += 1
+        return {
+            "message": {"role": "assistant", "content": "Scope 2입니다." if not calls else "", "tool_calls": calls},
+            "metrics": {"client_elapsed_ms": 1.0, "done_reason": "stop"},
+        }
+
+    def select_tool_action(self, **kwargs: object) -> dict:
+        self.recovered = True
+        allowed = kwargs["allowed_tools"]
+        self.asserted_tool_names = [item["function"]["name"] for item in allowed]
+        return {
+            "action": {
+                "tool_name": "invoke_kac_skill",
+                "arguments": {
+                    "skill_name": "scope-activity-classification",
+                    "inputs": {
+                        "activity_description": "외부 전력회사에서 구매한 전기를 사무실에서 사용",
+                        "organization_boundary": "회사 조직 경계 안의 사무실",
+                        "source_ownership_or_control": "UNKNOWN",
+                        "purchased_energy_type": "ELECTRICITY",
+                        "value_chain_relation": "UNKNOWN",
+                    },
+                },
+            },
+            "metrics": {"phase": "tool_action_recovery", "client_elapsed_ms": 1.0},
+        }
+
 class KACRuntimeTests(unittest.TestCase):
     def test_graph_is_source_linked_and_resolves_relation_path(self) -> None:
         graph = KnowledgeGraph(ROOT)
@@ -241,6 +290,31 @@ class KACRuntimeTests(unittest.TestCase):
             self.assertTrue(client.structured)
             self.assertEqual(result["stop_reason"], "STRUCTURED_ANSWER_CANDIDATE_VERIFIED")
             self.assertNotEqual(result["answer"], "검증 전 초안")
+
+    def test_natural_language_before_skill_recovers_to_model_selected_action(self) -> None:
+        request = {
+            "question": "외부 전력회사에서 구매한 전기를 사용합니다. 이 활동은 Scope 몇인가요?",
+            "userRole": "LEARNER",
+            "asOfDate": "2026-08-28",
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            temporary = Path(directory)
+            client = ActionRecoveryQwen()
+            result = run_agent(
+                request,
+                root=ROOT,
+                runs_root=temporary / "runs",
+                db_path=temporary / "state.sqlite3",
+                client=client,
+            )
+            self.assertEqual(result["status"], "PASS")
+            self.assertTrue(client.recovered)
+            self.assertEqual(client.asserted_tool_names, ["invoke_kac_skill"])
+            self.assertEqual(result["skills_invoked"], ["scope-activity-classification"])
+            events = json.loads((Path(result["run_directory"]) / "events.json").read_text(encoding="utf-8"))
+            self.assertTrue(any(item["event_type"] == "action_structured" for item in events))
+            repairs = [item for item in events if item["event_type"] == "candidate_evidence_repaired"]
+            self.assertEqual(repairs[0]["added_evidence_ids"], ["concept:OPERATIONAL_BOUNDARY"])
 
 
 if __name__ == "__main__":

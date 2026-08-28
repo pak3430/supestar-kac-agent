@@ -32,6 +32,10 @@ class ToolEnvironment:
         catalog = []
         for evidence_id in sorted(self.evidence):
             item = self.evidence[evidence_id]
+            if evidence_id.startswith("skill:skill-run-"):
+                stable_id = f"skill:{item.get('skill_name', '')}:latest"
+                if stable_id in self.evidence:
+                    continue
             concept = item.get("concept") if isinstance(item.get("concept"), dict) else {}
             output = item.get("output") if isinstance(item.get("output"), dict) else {}
             if evidence_id.startswith("concept:"):
@@ -47,11 +51,21 @@ class ToolEnvironment:
                     f"{item.get('answer', '')}; ordered_nodes={output.get('ordered_nodes', [])}; "
                     f"concept_rows={output.get('concept_rows', [])}"
                 )
-            catalog.append({
+            catalog_item = {
                 "evidence_id": evidence_id,
                 "grounding": grounding,
                 "source_refs": item.get("source_refs", []),
-            })
+            }
+            if evidence_id.startswith("skill:"):
+                catalog_item["authoritative_skill_output"] = {
+                    key: output.get(key)
+                    for key in (
+                        "verdict", "answer", "candidate_scope", "missing_evidence",
+                        "rule_trace", "ordered_nodes", "concept_rows",
+                    )
+                    if key in output
+                }
+            catalog.append(catalog_item)
         return catalog
 
     def execute(self, tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:

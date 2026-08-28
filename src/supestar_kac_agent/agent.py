@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import uuid
+from copy import deepcopy
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
@@ -43,6 +44,46 @@ def _system_prompt(*, anchors: list[str], catalog: list[dict[str, Any]], role: s
         "질문에서 어휘적으로 발견된 anchor 후보(경로 지시가 아님): " + json.dumps(anchors, ensure_ascii=False),
         "등록된 원자 Skill catalog: " + json.dumps(catalog, ensure_ascii=False, separators=(",", ":")),
     ])
+
+
+def _repair_observed_concept_citations(
+    candidate: dict[str, Any],
+    verification: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Add only verifier-proposed, already observed evidence IDs.
+
+    This does not rewrite a claim or invent knowledge. It is limited to the case
+    where every remaining failure is an uncovered concept citation and the
+    verifier has an observed repair ID for that exact concept.
+    """
+    missing = verification.get("missing_requirements", [])
+    if (
+        not missing
+        or verification.get("unsupported_evidence_ids")
+        or verification.get("forbidden_confusions")
+        or not all(str(item).startswith("claim_uncovered_concept:") for item in missing)
+    ):
+        return None
+    repaired = deepcopy(candidate)
+    claims = repaired.get("claims") if isinstance(repaired.get("claims"), list) else []
+    changed = False
+    repair_map = verification.get("repair_evidence_by_concept", {})
+    for item in missing:
+        _, index_text, concept_id = str(item).split(":", 2)
+        index = int(index_text)
+        if index >= len(claims) or not isinstance(claims[index], dict):
+            return None
+        candidates = repair_map.get(concept_id, [])
+        if not candidates:
+            return None
+        evidence_ids = claims[index].get("evidence_ids")
+        evidence_ids = list(evidence_ids) if isinstance(evidence_ids, list) else []
+        preferred = next((value for value in candidates if str(value).startswith("concept:")), candidates[0])
+        if preferred not in evidence_ids:
+            evidence_ids.append(preferred)
+            claims[index]["evidence_ids"] = evidence_ids
+            changed = True
+    return repaired if changed else None
 
 
 def run_agent(
@@ -137,6 +178,58 @@ def run_agent(
                 "metrics":metrics,
             })
             messages.append(message)
+            if not calls and hasattr(client, "select_tool_action"):
+                observed_concepts = sorted(
+                    evidence_id.split(":", 1)[1]
+                    for evidence_id in environment.evidence
+                    if evidence_id.startswith("concept:")
+                )
+                unobserved_anchors = [anchor for anchor in anchors if anchor not in observed_concepts]
+                observed_edges = {
+                    evidence_id for evidence_id in environment.evidence if evidence_id.startswith("edge:")
+                }
+                recovery_tool_names: set[str] = set()
+                if unobserved_anchors:
+                    recovery_tool_names = {"observe_concept"}
+                elif not environment.skill_runs:
+                    recovery_tool_names = {"invoke_kac_skill"}
+                elif len(anchors) >= 2 and not observed_edges:
+                    recovery_tool_names = {"expand_relations"}
+                recovery_definitions = [
+                    item for item in definitions
+                    if item["function"]["name"] in recovery_tool_names
+                ]
+                if recovery_definitions:
+                    try:
+                        recovered = client.select_tool_action(
+                            question=question,
+                            rejected_draft=str(message.get("content", "")),
+                            anchors=anchors,
+                            evidence_catalog=environment.evidence_catalog(),
+                            skill_catalog=environment.catalog,
+                            allowed_tools=recovery_definitions,
+                        )
+                        recovery_metrics = {"step":step, **recovered.get("metrics", {})}
+                        inference_metrics.append(recovery_metrics)
+                        action = recovered["action"]
+                        calls = [{"function":{"name":action["tool_name"], "arguments":action["arguments"]}}]
+                        messages[-1] = {"role":"assistant", "content":"", "tool_calls":calls}
+                        emit({
+                            "event_type":"action_structured",
+                            "step":step,
+                            "adapter":"OLLAMA_JSON_SCHEMA",
+                            "tool_name":action["tool_name"],
+                            "action_hash":_hash(action),
+                            "metrics":recovery_metrics,
+                        })
+                    except Exception as error:
+                        emit({
+                            "event_type":"model_error",
+                            "step":step,
+                            "phase":"tool_action_recovery",
+                            "error_type":type(error).__name__,
+                            "error_message":str(error)[:500],
+                        })
             if not calls:
                 consecutive_direct_answer_rejections += 1
                 emit({"event_type":"direct_answer_rejected","step":step,"reason":"submit_answer_candidate tool was not used"})
@@ -276,6 +369,39 @@ def run_agent(
                         "repair_rule":"REVIEW이면 사용자에게 묻기 전에 missing_requirements에 맞는 도구 관찰을 수행하고, unsupported_evidence_ids는 실제 관찰된 evidence_id로 교체하세요.",
                     }
                     emit({"event_type":"verification","step":step,**verification})
+                    repaired_candidate = _repair_observed_concept_citations(candidate, verification)
+                    if repaired_candidate is not None:
+                        repaired_verification = verify_candidate(
+                            repaired_candidate,
+                            anchors=anchors,
+                            evidence=environment.evidence,
+                            skill_runs=environment.skill_runs,
+                            graph=graph,
+                        )
+                        emit({
+                            "event_type":"candidate_evidence_repaired",
+                            "step":step,
+                            "repair_type":"OBSERVED_CONCEPT_CITATIONS_ONLY",
+                            "before_candidate_hash":_hash(candidate),
+                            "after_candidate_hash":_hash(repaired_candidate),
+                            "added_evidence_ids":sorted(
+                                {
+                                    evidence_id
+                                    for claim in repaired_candidate.get("claims", [])
+                                    for evidence_id in claim.get("evidence_ids", [])
+                                }
+                                - {
+                                    evidence_id
+                                    for claim in candidate.get("claims", [])
+                                    for evidence_id in claim.get("evidence_ids", [])
+                                }
+                            ),
+                        })
+                        emit({"event_type":"verification","step":step,"repair_attempt":1,**repaired_verification})
+                        candidate = repaired_candidate
+                        verification = repaired_verification
+                        observation["candidate_repaired"] = True
+                        observation["verification"] = verification
                     if verification["verdict"] == "PASS":
                         completed = True
                     elif (

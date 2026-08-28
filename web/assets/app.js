@@ -9,6 +9,10 @@ const statusText = $("#statusText");
 const runStatus = $("#runStatus");
 const rawResult = $("#rawResult");
 let running = false;
+const featuredQuestionIds = new Set([
+  "concept-esg-carbon-credit",
+  "scope-owned-gas-boiler",
+]);
 
 const eventLabels = {
   agent_started: ["Agent run 시작", "질문에서 anchor 후보를 찾고 로컬 모델 경계를 기록했습니다."],
@@ -18,6 +22,8 @@ const eventLabels = {
   verification: ["Verifier 판정", "claim·개념·edge·출처 연결을 검사했습니다."],
   direct_answer_rejected: ["직접 답변 차단", "근거 제출 형식이 아니므로 답변을 공개하지 않았습니다."],
   candidate_structured: ["로컬 구조화", "같은 Qwen이 자연어 초안을 근거 claim JSON으로 변환했습니다."],
+  action_structured: ["로컬 행동 복구", "자연어로 이탈한 Qwen을 같은 로컬 모델의 구조화 출력으로 도구 행동에 복귀시켰습니다."],
+  candidate_evidence_repaired: ["관찰 근거 인용 복구", "문장 내용은 바꾸지 않고 검증기가 지정한 이미 관찰된 evidence_id만 보완했습니다."],
   model_error: ["모델 오류", "오류를 숨기지 않고 실행을 안전하게 중단합니다."],
   agent_completed: ["Agent run 종료", "최종 실행 상태를 저장했습니다."],
 };
@@ -66,6 +72,8 @@ function summarizeEvent(event) {
   if (event.event_type === "observation") return `${event.tool_name} → ${event.status}`;
   if (event.event_type === "verification") return `${event.verdict} · 누락 ${(event.missing_requirements || []).length} · 미관찰 인용 ${(event.unsupported_evidence_ids || []).length}`;
   if (event.event_type === "candidate_structured") return `JSON schema adapter · attempt ${event.adapter_attempt || 1}`;
+  if (event.event_type === "action_structured") return `${event.tool_name} · JSON schema action adapter`;
+  if (event.event_type === "candidate_evidence_repaired") return `${(event.added_evidence_ids || []).join(" · ")} 추가`;
   if (event.event_type === "model_error") return `${event.error_type}: ${event.error_message}`;
   if (event.event_type === "agent_completed") return `${event.status} · ${event.stop_reason}`;
   return event.reason || "실행 상태가 기록되었습니다.";
@@ -76,7 +84,7 @@ function addTrace(event) {
   if (placeholder) placeholder.remove();
   const [title, fallback] = eventLabels[event.event_type] || [event.event_type, ""];
   const item = document.createElement("li");
-  item.className = `trace-item ${event.event_type === "tool_action" ? "action" : ""} ${event.event_type === "verification" ? "verify" : ""} ${event.event_type === "model_error" ? "error" : ""}`;
+  item.className = `trace-item ${["tool_action", "action_structured"].includes(event.event_type) ? "action" : ""} ${["verification", "candidate_evidence_repaired"].includes(event.event_type) ? "verify" : ""} ${event.event_type === "model_error" ? "error" : ""}`;
   const strong = document.createElement("strong");
   strong.textContent = `${String(event.sequence || "").padStart(2, "0")} · ${title}`;
   const detail = document.createElement("p");
@@ -102,6 +110,53 @@ async function loadHealth() {
     $("#modelBadge").className = "badge error";
     statusText.textContent = "로컬 서버에 연결할 수 없습니다.";
     sendButton.disabled = true;
+  }
+}
+
+function chooseQuestion(question) {
+  input.value = question;
+  input.focus();
+}
+
+async function loadValidationQuestions() {
+  const container = $("#validationQuestions");
+  const count = $("#validationCount");
+  try {
+    const response = await fetch("/api/validation-questions", {cache: "no-store"});
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const bank = await response.json();
+    const visible = bank.questions.filter((item) => !featuredQuestionIds.has(item.id));
+    count.textContent = `${bank.question_count}개 계약 질문 · ${Object.keys(bank.category_counts).length}개 영역`;
+    container.innerHTML = "";
+    const categories = [...new Set(visible.map((item) => item.category))];
+    categories.forEach((category) => {
+      const group = document.createElement("section");
+      group.className = "validation-group";
+      const heading = document.createElement("h3");
+      heading.textContent = category;
+      const grid = document.createElement("div");
+      grid.className = "validation-grid";
+      visible.filter((item) => item.category === category).forEach((item) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.dataset.question = item.question;
+        button.title = item.verifies;
+        const label = document.createElement("strong");
+        label.textContent = item.label;
+        const purpose = document.createElement("span");
+        purpose.textContent = item.verifies;
+        const meta = document.createElement("small");
+        meta.textContent = `${item.expected_skill} · ${item.expected_skill_verdict}`;
+        button.append(label, purpose, meta);
+        button.addEventListener("click", () => chooseQuestion(item.question));
+        grid.append(button);
+      });
+      group.append(heading, grid);
+      container.append(group);
+    });
+  } catch (error) {
+    count.textContent = "질문 은행을 불러오지 못했습니다.";
+    container.innerHTML = "";
   }
 }
 
@@ -167,10 +222,7 @@ form.addEventListener("submit", (event) => {
 });
 
 document.querySelectorAll("[data-question]").forEach((button) => {
-  button.addEventListener("click", () => {
-    input.value = button.dataset.question;
-    input.focus();
-  });
+  button.addEventListener("click", () => chooseQuestion(button.dataset.question));
 });
 
 resetButton.addEventListener("click", () => {
@@ -184,3 +236,4 @@ resetButton.addEventListener("click", () => {
 });
 
 loadHealth();
+loadValidationQuestions();
