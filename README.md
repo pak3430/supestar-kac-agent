@@ -103,6 +103,8 @@ supestar-agent serve --port 4177
 
 내부 작동 구조를 한 화면으로 설명한 시각화는 [http://127.0.0.1:4177/runtime-visual.html](http://127.0.0.1:4177/runtime-visual.html)에서 볼 수 있습니다.
 
+사전 지식·질문별 행동·동적 JSON·감사 JSON·단일/관계 질문 분기를 구분한 원리 상세도는 [http://127.0.0.1:4177/kac-principle-diagram.html](http://127.0.0.1:4177/kac-principle-diagram.html)에서 볼 수 있습니다.
+
 컴포넌트·데이터 흐름·판단 책임을 구분한 아키텍처 구조도는 [http://127.0.0.1:4177/kac-architecture.html](http://127.0.0.1:4177/kac-architecture.html)에서 볼 수 있습니다.
 
 입력·함수·내부 처리·생성물·다음 단계를 23개 요소로 분해한 상세도는 [http://127.0.0.1:4177/runtime-deep-dive.html](http://127.0.0.1:4177/runtime-deep-dive.html)에서 볼 수 있습니다.

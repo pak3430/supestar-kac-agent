@@ -19,6 +19,7 @@ from .validation_bank import public_question_bank
 
 STATIC_ALLOWLIST = {
     "index.html",
+    "kac-principle-diagram.html",
     "kac-architecture.html",
     "runtime-visual.html",
     "runtime-deep-dive.html",

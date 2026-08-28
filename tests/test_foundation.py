@@ -6,7 +6,8 @@ from unittest.mock import patch
 from supestar_kac_agent.contracts import Observation, ToolAction, VerificationDecision
 from supestar_kac_agent.doctor import _local_endpoint, model_summary
 from supestar_kac_agent.ollama_client import OllamaClient
-from supestar_kac_agent.policy import REQUIRED_TOOLS, load_policy
+from supestar_kac_agent.policy import REQUIRED_TOOLS, load_policy, project_root
+from supestar_kac_agent.server import STATIC_ALLOWLIST
 
 
 class FoundationTests(unittest.TestCase):
@@ -91,6 +92,14 @@ class FoundationTests(unittest.TestCase):
         self.assertEqual(request.call_count, 2)
         self.assertEqual(result["metrics"]["serialization_attempts"], 2)
         self.assertEqual(result["metrics"]["attempt_metrics"][0]["done_reason"], "length")
+
+    def test_every_allowlisted_static_file_exists(self) -> None:
+        web_root = project_root() / "web"
+        self.assertIn("kac-principle-diagram.html", STATIC_ALLOWLIST)
+        self.assertFalse([
+            relative for relative in STATIC_ALLOWLIST
+            if not (web_root / relative).is_file()
+        ])
 
 
 if __name__ == "__main__":
