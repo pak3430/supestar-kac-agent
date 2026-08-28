@@ -9,6 +9,7 @@ from unittest.mock import patch
 from supestar_kac_agent.agent import (
     _bind_trusted_skill_context,
     _lifecycle_gate,
+    _normalize_model_tool_arguments,
     _normalize_executed_skill_evidence_ids,
     _repair_observed_concept_citations,
     run_agent,
@@ -25,6 +26,27 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def tool_call(name: str, arguments: dict) -> dict:
     return {"function": {"name": name, "arguments": arguments}}
+
+
+def complete_traversal(environment: ToolEnvironment, start: str, edge_ids: list[str]) -> None:
+    observed = environment.execute("observe_neighbors", {
+        "concept":start,
+        "purpose":"관계 탐색 시작",
+    })
+    if observed["status"] not in {"NEIGHBORS_OBSERVED", "REUSED_EXISTING_NEIGHBOR_OBSERVATION"}:
+        raise AssertionError(observed)
+    for edge_id in edge_ids:
+        selected = environment.execute("select_relation_step", {
+            "edge_id":edge_id,
+            "purpose":"현재 1-hop Observation에서 질문과 관련된 관계 선택",
+        })
+        if selected["status"] != "RELATION_STEP_SELECTED":
+            raise AssertionError(selected)
+    stopped = environment.execute("stop_relation_traversal", {
+        "reason":"질문의 anchor가 AI 선택 edge로 연결됨",
+    })
+    if stopped["status"] != "RELATION_TRAVERSAL_COMPLETED":
+        raise AssertionError(stopped)
 
 
 class ScriptedLocalQwen:
@@ -53,11 +75,15 @@ class ScriptedLocalQwen:
                 tool_call("observe_concept", {"concept": "ESG"}),
                 tool_call("observe_concept", {"concept": "탄소크레딧"}),
             ],
-            [tool_call("expand_relations", {
-                "concept": "ESG",
-                "toward_concept": "탄소크레딧",
-                "purpose": "두 anchor 사이의 근거 있는 연결 관찰",
+            [tool_call("observe_neighbors", {
+                "concept":"ESG",
+                "purpose":"ESG에서 질문과 관련된 1-hop 관계부터 관찰",
             })],
+            [tool_call("select_relation_step", {"edge_id":"edge:esg:sdgs", "purpose":"기후행동 체계로 연결"})],
+            [tool_call("select_relation_step", {"edge_id":"edge:sdgs:13", "purpose":"탄소 질문과 직접 관련된 기후행동 선택"})],
+            [tool_call("select_relation_step", {"edge_id":"edge:forest:sdg13", "purpose":"기후행동과 산림탄소의 실제 관계 선택"})],
+            [tool_call("select_relation_step", {"edge_id":"edge:forest:credit", "purpose":"산림탄소에서 탄소크레딧으로 연결"})],
+            [tool_call("stop_relation_traversal", {"reason":"ESG와 탄소크레딧 anchor가 선택 edge로 연결됨"})],
             [tool_call("invoke_kac_skill", {
                 "skill_name": "carbon-market-unit-comparison",
                 "inputs": {
@@ -97,7 +123,12 @@ class StructuredFallbackQwen:
                 tool_call("observe_concept", {"concept": "ESG"}),
                 tool_call("observe_concept", {"concept": "탄소크레딧"}),
             ],
-            [tool_call("expand_relations", {"concept": "ESG", "toward_concept": "탄소크레딧", "purpose": "관계 관찰"})],
+            [tool_call("observe_neighbors", {"concept":"ESG", "purpose":"관계 탐색 시작"})],
+            [tool_call("select_relation_step", {"edge_id":"edge:esg:sdgs", "purpose":"기후행동 체계 선택"})],
+            [tool_call("select_relation_step", {"edge_id":"edge:sdgs:13", "purpose":"SDG 13 선택"})],
+            [tool_call("select_relation_step", {"edge_id":"edge:forest:sdg13", "purpose":"산림탄소 선택"})],
+            [tool_call("select_relation_step", {"edge_id":"edge:forest:credit", "purpose":"탄소크레딧 연결"})],
+            [tool_call("stop_relation_traversal", {"reason":"anchor 연결 완료"})],
             [tool_call("invoke_kac_skill", {
                 "skill_name": "carbon-market-unit-comparison",
                 "inputs": {"question": "ESG와 탄소크레딧 관계", "purpose": "LEARNING", "asOfDate": "2026-08-27"},
@@ -231,6 +262,194 @@ class GateViolationQwen:
         }
 
 class KACRuntimeTests(unittest.TestCase):
+    def test_local_model_edge_object_field_is_normalized_only_for_exact_allowed_enum(self) -> None:
+        definition = {
+            "parameters":{
+                "properties":{
+                    "edge_id":{"enum":["edge:credit:vcm", "edge:forest:credit"]},
+                },
+            },
+        }
+        normalized, changes = _normalize_model_tool_arguments(
+            "select_relation_step",
+            {"object":"edge:forest:credit", "purpose":"산림탄소 관계 선택"},
+            definition,
+        )
+        self.assertEqual(normalized, {
+            "edge_id":"edge:forest:credit",
+            "purpose":"산림탄소 관계 선택",
+        })
+        self.assertEqual(changes[0]["value"], "edge:forest:credit")
+        rejected, changes = _normalize_model_tool_arguments(
+            "select_relation_step",
+            {"object":"edge:not-observed", "purpose":"없는 관계"},
+            definition,
+        )
+        self.assertNotIn("edge_id", rejected)
+        self.assertEqual(changes, [])
+
+    def test_agentic_traversal_exposes_one_hop_and_defers_shortest_path_until_stop(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            environment = ToolEnvironment(
+                root=ROOT,
+                run_dir=Path(directory),
+                anchors=["ESG", "CARBON_CREDIT"],
+            )
+            with patch.object(
+                environment.graph,
+                "shortest_path",
+                wraps=environment.graph.shortest_path,
+            ) as shortest_path:
+                observed = environment.execute("observe_neighbors", {
+                    "concept":"ESG",
+                    "purpose":"현재 node의 직접 관계만 관찰",
+                })
+                neighbor_ids = {
+                    item["neighbor"]["id"]
+                    for item in observed["candidate_relations"]
+                }
+                self.assertEqual(neighbor_ids, {
+                    "ESG_MANAGEMENT",
+                    "ENVIRONMENTAL_PILLAR",
+                    "SOCIAL_PILLAR",
+                    "GOVERNANCE_PILLAR",
+                    "SDGS",
+                })
+                self.assertNotIn("CARBON_CREDIT", neighbor_ids)
+                self.assertFalse(observed["full_path_precomputed"])
+                for edge_id in [
+                    "edge:esg:sdgs",
+                    "edge:sdgs:13",
+                    "edge:forest:sdg13",
+                    "edge:forest:credit",
+                ]:
+                    selected = environment.execute("select_relation_step", {
+                        "edge_id":edge_id,
+                        "purpose":"현재 Observation에서 다음 관계 선택",
+                    })
+                    self.assertEqual(selected["status"], "RELATION_STEP_SELECTED")
+                    self.assertFalse(selected["full_path_precomputed"])
+                self.assertEqual(shortest_path.call_count, 0)
+                stopped = environment.execute("stop_relation_traversal", {
+                    "reason":"질문 anchor 연결 완료",
+                })
+                self.assertEqual(stopped["status"], "RELATION_TRAVERSAL_COMPLETED")
+                self.assertEqual(shortest_path.call_count, 1)
+                self.assertEqual(
+                    stopped["post_hoc_validation"]["algorithm_role"],
+                    "POST_HOC_VALIDATION_ONLY",
+                )
+
+    def test_relation_candidate_order_is_run_salted_not_semantic_priority(self) -> None:
+        graph = KnowledgeGraph(ROOT)
+        first = [item["evidence_id"] for item in graph.neighbors("ESG", ordering_salt="run-a")]
+        second = [item["evidence_id"] for item in graph.neighbors("ESG", ordering_salt="run-b")]
+        self.assertEqual(set(first), set(second))
+        self.assertNotEqual(first, second)
+
+    def test_reverse_traversal_is_built_from_qwen_selected_edges(self) -> None:
+        anchors = ["CARBON_CREDIT", "ESG"]
+        with tempfile.TemporaryDirectory() as directory:
+            environment = ToolEnvironment(root=ROOT, run_dir=Path(directory), anchors=anchors)
+            complete_traversal(environment, "CARBON_CREDIT", [
+                "edge:forest:credit",
+                "edge:forest:sdg13",
+                "edge:sdgs:13",
+                "edge:esg:sdgs",
+            ])
+            snapshot = environment.traversal.snapshot()
+            self.assertEqual(snapshot["status"], "COMPLETED")
+            self.assertEqual(snapshot["active_path"]["node_ids"], [
+                "CARBON_CREDIT",
+                "FOREST_CARBON_PROJECT",
+                "SDG_13",
+                "SDGS",
+                "ESG",
+            ])
+            self.assertTrue(all(
+                environment.evidence[edge_id].get("observed_via_agent_traversal_step")
+                for edge_id in snapshot["selected_edge_ids"]
+            ))
+
+    def test_removed_or_unobserved_edge_cannot_be_selected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            environment = ToolEnvironment(
+                root=ROOT,
+                run_dir=Path(directory),
+                anchors=["ESG", "CARBON_CREDIT"],
+            )
+            environment.graph.edges.pop("edge:esg:sdgs")
+            observed = environment.execute("observe_neighbors", {
+                "concept":"ESG",
+                "purpose":"edge 제거 환경 검증",
+            })
+            self.assertNotIn("edge:esg:sdgs", observed["selectable_edge_ids"])
+            rejected = environment.execute("select_relation_step", {
+                "edge_id":"edge:esg:sdgs",
+                "purpose":"존재하지 않는 edge 선택 시도",
+            })
+            self.assertEqual(rejected["status"], "UNOBSERVED_OR_UNSELECTABLE_EDGE")
+            self.assertNotIn("edge:esg:sdgs", environment.evidence)
+
+    def test_backtrack_preserves_audit_history_and_allows_an_alternate_branch(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            environment = ToolEnvironment(
+                root=ROOT,
+                run_dir=Path(directory),
+                anchors=["ESG", "CARBON_CREDIT"],
+            )
+            environment.execute("observe_neighbors", {"concept":"ESG", "purpose":"탐색 시작"})
+            environment.execute("select_relation_step", {
+                "edge_id":"edge:esg:environment",
+                "purpose":"환경 축 후보 확인",
+            })
+            backtracked = environment.execute("backtrack_relation_step", {
+                "purpose":"환경 축에서 탄소크레딧으로 이어지는 관찰 관계가 없어 복귀",
+            })
+            self.assertEqual(backtracked["status"], "RELATION_STEP_BACKTRACKED")
+            self.assertEqual(backtracked["to"], "ESG")
+            selected = environment.execute("select_relation_step", {
+                "edge_id":"edge:esg:sdgs",
+                "purpose":"기후행동 관계로 대안 선택",
+            })
+            self.assertEqual(selected["status"], "RELATION_STEP_SELECTED")
+            actions = environment.traversal.snapshot()["actions"]
+            self.assertTrue(any(item["action"] == "BACKTRACK_RELATION_STEP" for item in actions))
+            self.assertEqual(environment.traversal.active_edge_ids, ["edge:esg:sdgs"])
+            self.assertEqual(environment.traversal.selected_edge_ids, [
+                "edge:esg:environment",
+                "edge:esg:sdgs",
+            ])
+
+    def test_backtracked_edge_cannot_complete_or_ground_the_active_path(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            environment = ToolEnvironment(
+                root=ROOT,
+                run_dir=Path(directory),
+                anchors=["ESG", "CARBON_CREDIT"],
+            )
+            environment.execute("observe_neighbors", {"concept":"ESG", "purpose":"탐색 시작"})
+            for edge_id in [
+                "edge:esg:sdgs",
+                "edge:sdgs:13",
+                "edge:forest:sdg13",
+                "edge:forest:credit",
+            ]:
+                environment.execute("select_relation_step", {
+                    "edge_id":edge_id,
+                    "purpose":"질문의 anchor를 향한 실제 1-hop 선택",
+                })
+            self.assertTrue(environment.traversal.anchors_connected)
+            environment.execute("backtrack_relation_step", {
+                "purpose":"마지막 탄소크레딧 관계 선택 철회",
+            })
+            self.assertFalse(environment.traversal.anchors_connected)
+            stopped = environment.execute("stop_relation_traversal", {
+                "reason":"철회된 edge로 연결된 것처럼 종료 시도",
+            })
+            self.assertEqual(stopped["status"], "STOP")
+            self.assertEqual(stopped["error"], "ANCHORS_NOT_CONNECTED_BY_AGENT_SELECTED_STEPS")
+
     def test_trusted_request_context_overrides_missing_or_model_guessed_skill_values(self) -> None:
         environment = ToolEnvironment(root=ROOT, run_dir=ROOT / "runs" / "unit-test-unused")
         bound, changes = _bind_trusted_skill_context(
@@ -260,14 +479,15 @@ class KACRuntimeTests(unittest.TestCase):
         graph = KnowledgeGraph(ROOT)
         anchors = ["ESG", "CARBON_CREDIT"]
         with tempfile.TemporaryDirectory() as directory:
-            environment = ToolEnvironment(root=ROOT, run_dir=Path(directory))
+            environment = ToolEnvironment(root=ROOT, run_dir=Path(directory), anchors=anchors)
             for concept in anchors:
                 environment.execute("observe_concept", {"concept":concept})
-            environment.execute("expand_relations", {
-                "concept":"ESG",
-                "toward_concept":"CARBON_CREDIT",
-                "purpose":"관계 관찰",
-            })
+            complete_traversal(environment, "ESG", [
+                "edge:esg:sdgs",
+                "edge:sdgs:13",
+                "edge:forest:sdg13",
+                "edge:forest:credit",
+            ])
             environment.execute("invoke_kac_skill", {
                 "skill_name":"esg-carbon-action-path",
                 "inputs":{
@@ -283,7 +503,8 @@ class KACRuntimeTests(unittest.TestCase):
                 "claims":[{
                     "text":"ESG와 탄소크레딧은 기후행동과 산림탄소를 통해 연결됩니다.",
                     "evidence_ids":[
-                        "edge:esg:environment",
+                        "edge:esg:sdgs",
+                        "edge:forest:credit",
                         "skill:esg-carbon-action-path:latest",
                     ],
                 }],
@@ -294,6 +515,7 @@ class KACRuntimeTests(unittest.TestCase):
                 evidence=environment.evidence,
                 skill_runs=environment.skill_runs,
                 graph=graph,
+                traversal=environment.traversal.snapshot(),
             )
             self.assertIn("claim_relation_path:0", verification["missing_requirements"])
             self.assertEqual(verification["repair_relation_evidence_by_claim"]["0"], [
@@ -310,8 +532,86 @@ class KACRuntimeTests(unittest.TestCase):
                 evidence=environment.evidence,
                 skill_runs=environment.skill_runs,
                 graph=graph,
+                traversal=environment.traversal.snapshot(),
             )
             self.assertEqual(repaired_verification["verdict"], "PASS")
+            split_candidate = {
+                "answer":"탄소크레딧은 산림탄소사업과 관련됩니다. ESG는 SDGs와 연결됩니다.",
+                "claims":[
+                    {
+                        "text":"탄소크레딧은 산림탄소사업과 관련됩니다.",
+                        "evidence_ids":["concept:CARBON_CREDIT", "edge:forest:credit"],
+                    },
+                    {
+                        "text":"ESG는 SDGs와 연결됩니다.",
+                        "evidence_ids":["concept:ESG", "edge:esg:sdgs", "skill:esg-carbon-action-path:latest"],
+                    },
+                ],
+            }
+            split_verification = verify_candidate(
+                split_candidate,
+                anchors=anchors,
+                evidence=environment.evidence,
+                skill_runs=environment.skill_runs,
+                graph=graph,
+                traversal=environment.traversal.snapshot(),
+            )
+            self.assertEqual(split_verification["verdict"], "REVIEW")
+            self.assertIn(
+                "relationship_claim_covering_all_question_anchors",
+                split_verification["missing_requirements"],
+            )
+            self.assertIn(
+                "answer_cited_full_agent_relation_path",
+                split_verification["missing_requirements"],
+            )
+
+    def test_verifier_rejects_preloaded_relation_edges_without_agent_traversal(self) -> None:
+        graph = KnowledgeGraph(ROOT)
+        anchors = ["ESG", "CARBON_CREDIT"]
+        evidence = {
+            "concept:ESG":graph.observe("ESG"),
+            "concept:CARBON_CREDIT":graph.observe("CARBON_CREDIT"),
+        }
+        path = graph.shortest_path("ESG", "CARBON_CREDIT", bidirectional=True)
+        for edge in path["edges"]:
+            evidence[edge["id"]] = {"evidence_id":edge["id"], **edge}
+        skill_result = execute_skill("carbon-market-unit-comparison", {
+            "question":"ESG와 탄소크레딧 관계",
+            "purpose":"LEARNING",
+            "asOfDate":"2026-08-28",
+        }, root=ROOT)
+        run = skill_result["skill_run"]
+        evidence["skill:carbon-market-unit-comparison:latest"] = {
+            "evidence_id":"skill:carbon-market-unit-comparison:latest",
+            "skill_run_id":run["skill_run_id"],
+            "skill_name":run["skill_name"],
+            "answer":run["output"]["answer"],
+            "output":run["output"],
+            "source_refs":run["output"]["evidence_refs"],
+        }
+        candidate = {
+            "answer":"ESG는 기후행동과 산림탄소를 통해 탄소크레딧과 연결됩니다.",
+            "claims":[{
+                "text":"ESG는 기후행동과 산림탄소를 통해 탄소크레딧과 연결됩니다.",
+                "evidence_ids":[
+                    *path["edge_ids"],
+                    "skill:carbon-market-unit-comparison:latest",
+                ],
+            }],
+        }
+        verification = verify_candidate(
+            candidate,
+            anchors=anchors,
+            evidence=evidence,
+            skill_runs=[run],
+            graph=graph,
+            traversal={"status":"NOT_STARTED", "selected_edge_ids":[]},
+        )
+        self.assertEqual(verification["verdict"], "REVIEW")
+        self.assertIn("completed_agentic_relation_traversal", verification["missing_requirements"])
+        self.assertIn("agent_selected_relation_path_between_anchors", verification["missing_requirements"])
+        self.assertIn("skill_run_missing_agent_traversal_provenance", verification["missing_requirements"])
 
     def test_observed_skill_citation_can_repair_matching_uncovered_concept(self) -> None:
         candidate = {
@@ -456,7 +756,7 @@ class KACRuntimeTests(unittest.TestCase):
         graph = KnowledgeGraph(ROOT)
         anchors = ["OPERATIONAL_BOUNDARY", "ACTIVITY_DATA"]
         with tempfile.TemporaryDirectory() as directory:
-            environment = ToolEnvironment(root=ROOT, run_dir=Path(directory))
+            environment = ToolEnvironment(root=ROOT, run_dir=Path(directory), anchors=anchors)
             gate, definitions, state = _lifecycle_gate(environment, anchors, graph)
             self.assertEqual(gate, "OBSERVE_REQUIRED_ANCHORS")
             self.assertEqual(definitions[0]["function"]["name"], "observe_concept")
@@ -469,44 +769,61 @@ class KACRuntimeTests(unittest.TestCase):
             self.assertEqual({graph.resolve(choice) for choice in remaining_choices}, {"ACTIVITY_DATA"})
             environment.execute("observe_concept", {"concept":"ACTIVITY_DATA"})
             gate, definitions, state = _lifecycle_gate(environment, anchors, graph)
-            self.assertEqual(gate, "CONNECT_OBSERVED_ANCHORS")
-            self.assertEqual(definitions[0]["function"]["name"], "expand_relations")
-            environment.execute("expand_relations", {
+            self.assertEqual(gate, "START_AGENTIC_RELATION_TRAVERSAL")
+            self.assertEqual(definitions[0]["function"]["name"], "observe_neighbors")
+            environment.execute("observe_neighbors", {
                 "concept":"OPERATIONAL_BOUNDARY",
-                "toward_concept":"ACTIVITY_DATA",
-                "purpose":"필수 anchor 연결",
+                "purpose":"필수 anchor 관계의 1-hop 후보 관찰",
             })
+            gate, definitions, state = _lifecycle_gate(environment, anchors, graph)
+            self.assertEqual(gate, "ADVANCE_AGENTIC_RELATION_TRAVERSAL")
+            self.assertIn("select_relation_step", [item["function"]["name"] for item in definitions])
+            environment.execute("select_relation_step", {
+                "edge_id":"edge:scopes:activity",
+                "purpose":"운영 경계와 활동자료를 직접 연결",
+            })
+            gate, definitions, state = _lifecycle_gate(environment, anchors, graph)
+            self.assertEqual(gate, "COMPLETE_AGENTIC_RELATION_TRAVERSAL")
+            environment.execute("stop_relation_traversal", {"reason":"필수 anchor 연결 완료"})
             gate, definitions, state = _lifecycle_gate(environment, anchors, graph)
             self.assertEqual(gate, "EXECUTE_KAC_SKILL")
             self.assertEqual(definitions[0]["function"]["name"], "invoke_kac_skill")
 
-    def test_duplicate_concept_and_relation_observations_are_reused(self) -> None:
+    def test_neighbor_candidates_are_not_evidence_until_qwen_selects_an_edge(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
-            environment = ToolEnvironment(root=ROOT, run_dir=Path(directory))
+            environment = ToolEnvironment(
+                root=ROOT,
+                run_dir=Path(directory),
+                anchors=["ESG", "CARBON_CREDIT"],
+            )
             first_concept = environment.execute("observe_concept", {"concept":"ESG"})
             second_concept = environment.execute("observe_concept", {"concept":"ESG"})
             self.assertEqual(first_concept["status"], "OBSERVED")
             self.assertEqual(second_concept["status"], "REUSED_EXISTING_CONCEPT_OBSERVATION")
-            arguments = {"concept":"ESG", "toward_concept":"CARBON_CREDIT", "purpose":"관계 관찰"}
-            first_relation = environment.execute("expand_relations", arguments)
-            evidence_after_first = set(environment.evidence)
-            second_relation = environment.execute("expand_relations", arguments)
-            self.assertEqual(first_relation["status"], "EXPANDED")
-            self.assertEqual(second_relation["status"], "REUSED_EXISTING_RELATION_EXPANSION")
-            self.assertEqual(set(environment.evidence), evidence_after_first)
+            observed = environment.execute("observe_neighbors", {
+                "concept":"ESG",
+                "purpose":"1-hop 후보 관찰",
+            })
+            self.assertEqual(observed["status"], "NEIGHBORS_OBSERVED")
+            self.assertFalse(any(item.startswith("edge:") for item in environment.evidence))
+            selected = environment.execute("select_relation_step", {
+                "edge_id":"edge:esg:sdgs",
+                "purpose":"질문과 관련된 기후행동 관계 선택",
+            })
+            self.assertEqual(selected["status"], "RELATION_STEP_SELECTED")
+            self.assertEqual(
+                [item for item in environment.evidence if item.startswith("edge:")],
+                ["edge:esg:sdgs"],
+            )
 
     def test_natural_korean_scope_claim_is_grounded_by_skill_input_and_observed_concept(self) -> None:
         graph = KnowledgeGraph(ROOT)
         anchors = ["OPERATIONAL_BOUNDARY", "ACTIVITY_DATA"]
         with tempfile.TemporaryDirectory() as directory:
-            environment = ToolEnvironment(root=ROOT, run_dir=Path(directory))
+            environment = ToolEnvironment(root=ROOT, run_dir=Path(directory), anchors=anchors)
             for concept in anchors:
                 environment.execute("observe_concept", {"concept":concept})
-            environment.execute("expand_relations", {
-                "concept":"OPERATIONAL_BOUNDARY",
-                "toward_concept":"ACTIVITY_DATA",
-                "purpose":"Scope 판정 근거 연결",
-            })
+            complete_traversal(environment, "OPERATIONAL_BOUNDARY", ["edge:scopes:activity"])
             environment.execute("invoke_kac_skill", {
                 "skill_name":"scope-activity-classification",
                 "inputs":{
@@ -535,6 +852,7 @@ class KACRuntimeTests(unittest.TestCase):
                 evidence=environment.evidence,
                 skill_runs=environment.skill_runs,
                 graph=graph,
+                traversal=environment.traversal.snapshot(),
             )
             self.assertEqual(verification["verdict"], "PASS")
 
@@ -542,14 +860,15 @@ class KACRuntimeTests(unittest.TestCase):
         graph = KnowledgeGraph(ROOT)
         anchors = ["CARBON_CREDIT", "ESG"]
         with tempfile.TemporaryDirectory() as directory:
-            environment = ToolEnvironment(root=ROOT, run_dir=Path(directory))
+            environment = ToolEnvironment(root=ROOT, run_dir=Path(directory), anchors=anchors)
             for concept in anchors:
                 environment.execute("observe_concept", {"concept":concept})
-            environment.execute("expand_relations", {
-                "concept":"ESG",
-                "toward_concept":"CARBON_CREDIT",
-                "purpose":"관계 관찰",
-            })
+            complete_traversal(environment, "ESG", [
+                "edge:esg:sdgs",
+                "edge:sdgs:13",
+                "edge:forest:sdg13",
+                "edge:forest:credit",
+            ])
             environment.execute("invoke_kac_skill", {
                 "skill_name":"carbon-market-unit-comparison",
                 "inputs":{
@@ -571,6 +890,7 @@ class KACRuntimeTests(unittest.TestCase):
                 evidence=environment.evidence,
                 skill_runs=environment.skill_runs,
                 graph=graph,
+                traversal=environment.traversal.snapshot(),
             )
             self.assertEqual(verification["verdict"], "REVIEW")
             self.assertIn("anchor_claim_coverage:CARBON_CREDIT", verification["missing_requirements"])
@@ -719,9 +1039,46 @@ class KACRuntimeTests(unittest.TestCase):
             self.assertTrue(result["local_llm_verified"])
             self.assertFalse(result["internet_used"])
             self.assertFalse(result["question_specific_route_map_used"])
+            self.assertFalse(result["full_path_precomputed_for_agent"])
+            self.assertEqual(result["pathfinder_role"], "POST_HOC_VALIDATION_ONLY")
+            self.assertEqual(result["relation_traversal"]["status"], "COMPLETED")
+            self.assertEqual(result["agent_selected_relation_path"]["active_path"]["edge_ids"], [
+                "edge:esg:sdgs",
+                "edge:sdgs:13",
+                "edge:forest:sdg13",
+                "edge:forest:credit",
+            ])
             manifest = Path(result["run_directory"]) / "run_manifest.json"
             self.assertTrue(manifest.exists())
-            self.assertTrue(list((Path(result["run_directory"]) / "skills").glob("*.json")))
+            traversal_file = Path(result["run_directory"]) / "relation_traversal.json"
+            self.assertTrue(traversal_file.exists())
+            skill_files = list((Path(result["run_directory"]) / "skills").glob("*.json"))
+            self.assertTrue(skill_files)
+            skill_run = json.loads(skill_files[0].read_text(encoding="utf-8"))
+            self.assertEqual(
+                skill_run["traversal_hash"],
+                result["relation_traversal"]["skill_provenance_hash"],
+            )
+            events = json.loads((Path(result["run_directory"]) / "events.json").read_text(encoding="utf-8"))
+            self.assertEqual(
+                len([event for event in events if event["event_type"] == "relation_step_selected"]),
+                4,
+            )
+
+    def test_registered_tools_exclude_full_path_expansion(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            environment = ToolEnvironment(root=ROOT, run_dir=Path(directory))
+            tool_names = {
+                definition["function"]["name"]
+                for definition in environment.definitions()
+            }
+            self.assertNotIn("expand_relations", tool_names)
+            self.assertTrue({
+                "observe_neighbors",
+                "select_relation_step",
+                "backtrack_relation_step",
+                "stop_relation_traversal",
+            }.issubset(tool_names))
 
     def test_natural_language_fallback_is_structured_by_same_local_model(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

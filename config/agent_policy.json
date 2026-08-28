@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "agent_mode": "LOCAL_LLM_BOUNDED_KAC_LOOP",
+  "agent_mode": "LOCAL_LLM_AGENTIC_KAC_TRAVERSAL_LOOP",
   "local_llm": {
     "required": true,
     "default_endpoint": "http://127.0.0.1:11434",
@@ -11,14 +11,18 @@
   "autonomy": {
     "question_specific_route_maps_allowed": false,
     "model_selects_next_action": true,
-    "max_steps": 10,
-    "max_tool_calls": 16,
+    "max_steps": 18,
+    "max_tool_calls": 24,
+    "max_traversal_depth": 10,
     "stop_on_unregistered_tool": true,
     "stop_on_unobserved_claim": true
   },
   "allowed_tools": [
     "observe_concept",
-    "expand_relations",
+    "observe_neighbors",
+    "select_relation_step",
+    "backtrack_relation_step",
+    "stop_relation_traversal",
     "invoke_kac_skill",
     "request_missing_evidence",
     "submit_answer_candidate"

@@ -132,7 +132,11 @@ class OllamaClient:
                         "authoritative_skill_output의 verdict·answer·candidate_scope를 그대로 존중하고 다른 Scope나 판정을 만들지 마세요. "
                         "각 claim은 반드시 한글 중심의 독립적인 한국어 완전문장이어야 합니다. 중국어 문장을 쓰지 마세요. "
                         "그 문장에 언급한 모든 CCS 개념에 "
-                        "직접 닿는 evidence_id를 빠짐없이 인용하세요. relation 주장은 해당 edge를 인용하세요. "
+                        "직접 닿는 evidence_id를 빠짐없이 인용하세요. anchor 사이의 relation 주장은 "
+                        "allowed_evidence에 포함된 AI 선택 traversal edge 전체를 인용하세요. 후보로 보기만 한 edge는 사용하지 마세요. "
+                        "active_traversal_path=false인 backtrack 이력은 최종 anchor 관계 설명에 사용하지 마세요. "
+                        "관계 질문에서는 질문의 양쪽 anchor를 한 문장 안에 함께 언급하는 claim을 최소 하나 만들고, "
+                        "그 claim에 active_traversal_path=true인 전체 edge를 모두 인용하세요. "
                         "전체 claims 중 최소 하나는 skill: 로 시작하는 허용된 실제 SkillRun evidence_id를 정확히 인용하세요. "
                         "previous_verification_feedback의 repair_evidence_by_concept가 있으면 해당 claim에 제시된 evidence_id를 추가하세요. "
                         "근거가 약한 초안 문장은 버리세요. answer에는 claim text들을 자연스러운 순서로만 연결하세요."
@@ -169,12 +173,14 @@ class OllamaClient:
         evidence_catalog: list[dict[str, Any]],
         skill_catalog: list[dict[str, Any]],
         allowed_tools: list[dict[str, Any]],
+        traversal_context: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Recover one model-selected tool action after a natural-language turn.
 
         This is a constrained Local Qwen action adapter, not a question router.
         The runtime selects only the current lifecycle gate; Qwen still selects
-        the concrete concept, skill, and inputs from live observations.
+        the concrete concept, current one-hop edge, backtrack, skill, and inputs
+        from live observations.
         """
         tool_names = [item["function"]["name"] for item in allowed_tools]
         if not tool_names:
@@ -197,6 +203,7 @@ class OllamaClient:
             "observed_evidence": evidence_catalog,
             "registered_skills": skill_catalog,
             "allowed_tools_at_current_lifecycle_gate": allowed_tools,
+            "relation_traversal_context": traversal_context or {},
         }
         started = time.perf_counter()
         response = self._request("/api/chat", {
@@ -212,6 +219,8 @@ class OllamaClient:
                         "현재 lifecycle gate에서 허용된 도구 중 하나를 선택하고 arguments를 완성하세요. "
                         "질문별 고정 경로는 없으며, 질문·anchor·실제 Observation·등록된 Skill 계약만 사용합니다. "
                         "존재하지 않는 개념을 만들지 말고 CCS의 정확한 concept id 또는 alias를 사용하세요. "
+                        "관계 탐색 중에는 전체 경로를 추측하지 말고 직전 1-hop Observation의 edge_id 하나만 선택하거나, "
+                        "막힌 경우 backtrack_relation_step을 선택하세요. "
                         "Skill을 실행할 때 질문에 명시된 사실만 입력하고 확인되지 않은 필드는 UNKNOWN, NONE, "
                         "빈 배열 또는 생략으로 표현하여 REVIEW가 필요하면 그대로 관찰하세요."
                     ),

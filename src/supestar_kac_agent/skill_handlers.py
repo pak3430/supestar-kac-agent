@@ -23,6 +23,7 @@ def _contains(text: str, *needles: str) -> bool:
 
 
 def esg_carbon_action_path(payload: dict[str, Any], graph: KnowledgeGraph) -> SkillResult:
+    traversal = payload.pop("__traversal_provenance", None)
     question = str(payload.get("question", "")).strip()
     role = str(payload.get("userRole", "")).strip().upper()
     as_of_date = str(payload.get("asOfDate", "")).strip()
@@ -53,11 +54,23 @@ def esg_carbon_action_path(payload: dict[str, Any], graph: KnowledgeGraph) -> Sk
     else:
         verdict, trace = "PROCEED", ["DIRECTED_GROUNDED_PATH_SELECTED"]
     target_concept = allowed_focus.get(focus, "CO2E")
-    path = graph.shortest_path("ESG", target_concept)
-    if path.get("status") != "PATH_FOUND":
-        path = graph.shortest_path("ESG", target_concept, bidirectional=True)
-        if path.get("status") == "PATH_FOUND":
-            trace.append("BIDIRECTIONAL_GROUNDED_RELATION_FALLBACK")
+    if traversal and traversal.get("status") == "COMPLETED":
+        active_path = traversal.get("active_path", {})
+        node_ids = list(active_path.get("node_ids", []))
+        edge_ids = list(active_path.get("edge_ids", []))
+        path = {
+            "status":"PATH_FOUND" if node_ids and len(edge_ids) == len(node_ids) - 1 else "INVALID_TRAVERSAL_PATH",
+            "node_ids":node_ids,
+            "edge_ids":edge_ids,
+            "edges":[graph.edges[edge_id] for edge_id in edge_ids if edge_id in graph.edges],
+        }
+        trace.append("AGENT_SELECTED_TRAVERSAL_PATH_USED")
+    else:
+        path = graph.shortest_path("ESG", target_concept)
+        if path.get("status") != "PATH_FOUND":
+            path = graph.shortest_path("ESG", target_concept, bidirectional=True)
+            if path.get("status") == "PATH_FOUND":
+                trace.append("BIDIRECTIONAL_GROUNDED_RELATION_FALLBACK")
     if path.get("status") != "PATH_FOUND":
         verdict = "STOP"
         trace.append("GROUNDED_ESG_ACTION_PATH_UNAVAILABLE")

@@ -1,0 +1,242 @@
+{
+  "answer": "ESG 관점에서 탄소크레딧은 산림탄소사업을 통해 생성될 수 있으며, 이는 SDGs와 연결되어 있습니다. 산림탄소사업은 추가 흡수 성과를 정해진 절차와 검증·인증을 거쳐 단위화하여 탄소크레딧으로 만들 수 있고, 이는 SDG 13 기후행동에 기여할 수 있습니다. SDG 13은 SDGs의 일부로, 기후변화와 그 영향에 대응하는 지속가능발전목표를 다룹니다. ESG의 운영 행동은 넓은 사회·환경·경제 영향을 SDGs와 연결해 살필 수 있습니다.",
+  "claims": [
+    {
+      "evidence_ids": [
+        "concept:CARBON_CREDIT",
+        "concept:ESG",
+        "concept:FOREST_CARBON_PROJECT",
+        "concept:SDGS",
+        "edge:esg:sdgs",
+        "edge:forest:credit",
+        "edge:forest:sdg13",
+        "edge:sdgs:13"
+      ],
+      "text": "ESG 관점에서 탄소크레딧은 산림탄소사업을 통해 생성될 수 있으며, 이는 SDGs와 연결되어 있습니다."
+    },
+    {
+      "evidence_ids": [
+        "concept:FOREST_CARBON_PROJECT",
+        "concept:SDG_13",
+        "edge:forest:credit",
+        "edge:forest:sdg13",
+        "skill:esg-carbon-action-path:latest"
+      ],
+      "text": "산림탄소사업은 추가 흡수 성과를 정해진 절차와 검증·인증을 거쳐 단위화하여 탄소크레딧으로 만들 수 있고, 이는 SDG 13 기후행동에 기여할 수 있습니다."
+    },
+    {
+      "evidence_ids": [
+        "concept:SDGS",
+        "concept:SDG_13",
+        "edge:sdgs:13"
+      ],
+      "text": "SDG 13은 SDGs의 일부로, 기후변화와 그 영향에 대응하는 지속가능발전목표를 다룹니다."
+    },
+    {
+      "evidence_ids": [
+        "concept:ESG",
+        "concept:SDGS",
+        "edge:esg:sdgs"
+      ],
+      "text": "ESG의 운영 행동은 넓은 사회·환경·경제 영향을 SDGs와 연결해 살필 수 있습니다."
+    }
+  ],
+  "event_count": 54,
+  "full_path_precomputed_for_agent": false,
+  "internet_used": false,
+  "llm_called": true,
+  "local_llm_verified": true,
+  "local_qwen_client_elapsed_seconds": 370.2,
+  "local_qwen_inference_count": 11,
+  "model_identity": {
+    "capabilities": [
+      "completion",
+      "tools"
+    ],
+    "endpoint": "http://127.0.0.1:11434",
+    "endpoint_scope": "LOOPBACK_ONLY",
+    "family": "qwen2",
+    "model": "qwen2.5:14b-instruct-q4_K_M",
+    "model_digest": "7cdf5a0187d5c58cc5d369b255592f7841d1c4696d45a8c8a9489440385b22f6",
+    "ollama_version": "0.32.1",
+    "parameter_size": "14.8B",
+    "provider": "OLLAMA_LOCAL",
+    "quantization_level": "Q4_K_M"
+  },
+  "note": "This is a non-secret evidence snapshot. Full transient runs and SQLite state remain gitignored.",
+  "object_type": "VerifiedRunProofSnapshot",
+  "observed_evidence_ids": [
+    "concept:CARBON_CREDIT",
+    "concept:ESG",
+    "concept:FOREST_CARBON_PROJECT",
+    "concept:SDGS",
+    "concept:SDG_13",
+    "edge:esg:sdgs",
+    "edge:forest:credit",
+    "edge:forest:sdg13",
+    "edge:sdgs:13",
+    "skill:esg-carbon-action-path:latest",
+    "skill:skill-run-6434ff46-16e1-4712-8d71-1940c97eb5fc"
+  ],
+  "pathfinder_role": "POST_HOC_VALIDATION_ONLY",
+  "question": "ESG 관점에서 탄소크레딧과 어떤 상관관계가 있습니까?",
+  "question_specific_route_map_used": false,
+  "relation_traversal": {
+    "active_path": {
+      "edge_ids": [
+        "edge:forest:credit",
+        "edge:forest:sdg13",
+        "edge:sdgs:13",
+        "edge:esg:sdgs"
+      ],
+      "node_ids": [
+        "CARBON_CREDIT",
+        "FOREST_CARBON_PROJECT",
+        "SDG_13",
+        "SDGS",
+        "ESG"
+      ]
+    },
+    "anchor_ids": [
+      "CARBON_CREDIT",
+      "ESG"
+    ],
+    "backtrack_count": 0,
+    "ledger_hash": "e5a3796e5a68a2668fb59e594ebcaf5d7c668ceb808193a3a4b72b7d155b647e",
+    "post_hoc_validation": {
+      "agent_active_path_edge_count": 4,
+      "agent_path_is_shortest": true,
+      "algorithm_role": "POST_HOC_VALIDATION_ONLY",
+      "baseline_edge_count": 4,
+      "baseline_status": "PATH_FOUND",
+      "performed_after_agent_traversal": true,
+      "selection_history_edge_count": 4
+    },
+    "selected_steps": [
+      {
+        "direction": "INCOMING",
+        "edge_id": "edge:forest:credit",
+        "from": "CARBON_CREDIT",
+        "purpose": "ESG 책임의 산림탄소 연결",
+        "source_refs": [
+          "kofpi-forest-carbon-offset-program"
+        ],
+        "step_index": 1,
+        "to": "FOREST_CARBON_PROJECT"
+      },
+      {
+        "direction": "OUTGOING",
+        "edge_id": "edge:forest:sdg13",
+        "from": "FOREST_CARBON_PROJECT",
+        "purpose": "ESG 책임과 탄소크레딧의 연결을 찾는 관계 탐색",
+        "source_refs": [
+          "un-sustainable-development-goals",
+          "supestar-stage-v2-contract-import"
+        ],
+        "step_index": 2,
+        "to": "SDG_13"
+      },
+      {
+        "direction": "INCOMING",
+        "edge_id": "edge:sdgs:13",
+        "from": "SDG_13",
+        "purpose": "ESG 책임과 탄소크레딧의 상관관계 이해",
+        "source_refs": [
+          "un-sustainable-development-goals"
+        ],
+        "step_index": 3,
+        "to": "SDGS"
+      },
+      {
+        "direction": "INCOMING",
+        "edge_id": "edge:esg:sdgs",
+        "from": "SDGS",
+        "purpose": "ESG 관점에서 탄소크레딧과 어떤 상관관계가 있는지 찾기",
+        "source_refs": [
+          "un-sustainable-development-goals",
+          "supestar-stage-v2-contract-import"
+        ],
+        "step_index": 4,
+        "to": "ESG"
+      }
+    ],
+    "skill_provenance_hash": "f9fe25ee957566951d620a1a154b6c82efa65893fbf5fc43a7fd78dafdd8412a",
+    "status": "COMPLETED",
+    "visited_concept_ids": [
+      "CARBON_CREDIT",
+      "ESG",
+      "FOREST_CARBON_PROJECT",
+      "SDGS",
+      "SDG_13"
+    ]
+  },
+  "run_id": "agent-run-89720b1c-e30a-4656-9f7e-a46d522faa40",
+  "skill_run_ids": [
+    "skill-run-6434ff46-16e1-4712-8d71-1940c97eb5fc"
+  ],
+  "skills_invoked": [
+    "esg-carbon-action-path"
+  ],
+  "source_relation_traversal_sha256": "11e50b4f862f3c76fedbebb3ab0bd915182adcadf7719f65beeb6c2bf148e5e6",
+  "source_run_manifest_sha256": "3c686fee91ae5e17e99a06ce9bfbed377375c5d2947265a02a8731d644458139",
+  "stop_reason": "STRUCTURED_ANSWER_CANDIDATE_VERIFIED",
+  "verification": {
+    "agent_selected_edge_ids": [
+      "edge:esg:sdgs",
+      "edge:forest:credit",
+      "edge:forest:sdg13",
+      "edge:sdgs:13"
+    ],
+    "anchor_ids": [
+      "CARBON_CREDIT",
+      "ESG"
+    ],
+    "cited_evidence_ids": [
+      "concept:CARBON_CREDIT",
+      "concept:ESG",
+      "concept:FOREST_CARBON_PROJECT",
+      "concept:SDGS",
+      "concept:SDG_13",
+      "edge:esg:sdgs",
+      "edge:forest:credit",
+      "edge:forest:sdg13",
+      "edge:sdgs:13",
+      "skill:esg-carbon-action-path:latest"
+    ],
+    "cited_skill_run_ids": [
+      "skill-run-6434ff46-16e1-4712-8d71-1940c97eb5fc"
+    ],
+    "executed_skill_names": [
+      "esg-carbon-action-path"
+    ],
+    "forbidden_confusions": [],
+    "missing_requirements": [],
+    "observed_concept_ids": [
+      "CARBON_CREDIT",
+      "ESG",
+      "FOREST_CARBON_PROJECT",
+      "SDGS",
+      "SDG_13"
+    ],
+    "observed_edge_ids": [
+      "edge:esg:sdgs",
+      "edge:forest:credit",
+      "edge:forest:sdg13",
+      "edge:sdgs:13"
+    ],
+    "relation_traversal_status": "COMPLETED",
+    "repair_evidence_by_concept": {},
+    "repair_relation_evidence_by_claim": {},
+    "source_refs": [
+      "ghg-protocol-corporate-standard-faq",
+      "kofpi-forest-carbon-offset-program",
+      "supestar-stage-v1-derived-skill-contracts",
+      "supestar-stage-v2-contract-import",
+      "un-sustainable-development-goals"
+    ],
+    "uncovered_claim_concepts": {},
+    "unsupported_evidence_ids": [],
+    "verdict": "PASS",
+    "verified_answer": "ESG 관점에서 탄소크레딧은 산림탄소사업을 통해 생성될 수 있으며, 이는 SDGs와 연결되어 있습니다. 산림탄소사업은 추가 흡수 성과를 정해진 절차와 검증·인증을 거쳐 단위화하여 탄소크레딧으로 만들 수 있고, 이는 SDG 13 기후행동에 기여할 수 있습니다. SDG 13은 SDGs의 일부로, 기후변화와 그 영향에 대응하는 지속가능발전목표를 다룹니다. ESG의 운영 행동은 넓은 사회·환경·경제 영향을 SDGs와 연결해 살필 수 있습니다."
+  }
+}

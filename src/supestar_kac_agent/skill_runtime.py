@@ -24,6 +24,7 @@ def execute_skill(
     *,
     root: Path | None = None,
     agent_run_dir: Path | None = None,
+    traversal_provenance: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     root = (root or project_root()).resolve()
     compiled = compile_skills(root)
@@ -46,7 +47,10 @@ def execute_skill(
     if not handler:
         return {"status":"STOP","error":"HANDLER_NOT_INSTALLED","skill_name":skill_name}
     try:
-        result = handler(dict(inputs), KnowledgeGraph(root))
+        handler_inputs = dict(inputs)
+        if traversal_provenance:
+            handler_inputs["__traversal_provenance"] = traversal_provenance
+        result = handler(handler_inputs, KnowledgeGraph(root))
     except Exception as error:
         return {
             "status":"STOP",
@@ -73,6 +77,8 @@ def execute_skill(
         "chain_fingerprint":chain["fingerprint"],
         "input_snapshot":inputs,
         "input_hash":_hash(inputs),
+        "traversal_provenance":traversal_provenance,
+        "traversal_hash":traversal_provenance.get("traversal_hash") if traversal_provenance else None,
         "output":result,
         "output_hash":_hash(result),
         "implementation_origin":"REIMPLEMENTED_FROM_IMPORTED_METHOD_CONTRACT",

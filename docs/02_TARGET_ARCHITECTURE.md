@@ -12,12 +12,14 @@
          ▼
 ┌─────────────────────────────────────────────┐
 │ Evidence lifecycle gate                     │
-│ anchor 관찰 → 관계 연결 → Skill → 제출       │
+│ anchor 관찰 → 1-hop 선택 반복 → Skill → 제출 │
 └────────┬────────────────────────────────────┘
          ▼
 ┌─────────────────────────────────────────────┐
 │ 허용된 도구 레지스트리                       │
-│ observe_concept · expand_relations           │
+│ observe_concept · observe_neighbors          │
+│ select_relation_step · backtrack_relation_step│
+│ stop_relation_traversal                      │
 │ invoke_kac_skill · request_missing_evidence  │
 │ submit_answer_candidate                      │
 └────────┬────────────────────────────────────┘
@@ -44,7 +46,8 @@
 | 구성요소 | 책임 | 하지 않는 것 |
 |---|---|---|
 | Local Qwen Planner | 다음 관찰·Skill 행동 선택 | 출처·관계·판정 임의 생성 |
-| CCS 환경 | 개념·관계·출처 Observation 제공 | 질문별 경로 지정 |
+| CCS 환경 | 현재 node의 1-hop 개념·관계·출처 제공 | 전체 경로·질문별 경로 지정 |
+| Traversal Ledger | Qwen이 선택한 edge·node·backtrack·경로 hash 기록 | 다음 edge 대신 결정 |
 | KAC Skill Runtime | 구조화된 도메인 행동 실행 | 자유문장으로 규칙 변경 |
 | Orchestrator | 공통 증거 단계·호출 검증·예산·중복 방지·기록 | 질문별 도메인 정답 경로 하드코딩 |
 | Verifier | 관찰 근거·anchor·claim 검사 | 답변 대신 생성 |
@@ -58,4 +61,4 @@ Qwen이 도구 호출 대신 자연어를 반환할 수 있습니다. anchor 관
 
 ## 핵심 차이
 
-v2의 `질문 키워드 → 고정 route`를 제거했습니다. v3에서는 등록 Skill을 도구 레지스트리에서 발견할 수 있고, Qwen이 현재 Observation을 바탕으로 남은 개념·관계 방향·Skill·입력을 선택합니다. 오케스트레이터는 모든 질문에 같은 증거 lifecycle과 실행 예산을 적용하며, 완료된 개념·관계·동일 입력 SkillRun을 다시 실행하지 않습니다.
+v2의 `질문 키워드 → 고정 route`를 제거했습니다. 현재 Runtime에서는 Qwen이 매 turn 현재 node의 1-hop 관계만 받고 실제 edge 하나를 선택합니다. 선택된 edge만 증거가 되며, 후보로 보기만 한 edge는 답변에 사용할 수 없습니다. Qwen이 anchor를 연결하고 탐색을 종료하면 그 관계사슬 hash가 SkillRun에 결합됩니다. 오케스트레이터는 모든 질문에 같은 증거 lifecycle과 실행 예산을 적용하고, 결정론적 최단경로는 종료 뒤 사후 비교에만 사용합니다.

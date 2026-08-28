@@ -28,6 +28,8 @@ def main() -> None:
     request = read(run_dir / "request.json")
     identity = read(run_dir / "model_identity.json")
     events = read(run_dir / "events.json")
+    traversal_path = run_dir / "relation_traversal.json"
+    traversal = read(traversal_path) if traversal_path.exists() else {}
     failures = []
 
     def require(condition: bool, message: str) -> None:
@@ -40,6 +42,8 @@ def main() -> None:
     require(manifest.get("local_llm_verified") is True, "local LLM is not verified")
     require(manifest.get("internet_used") is False, "run claims Internet use")
     require(manifest.get("question_specific_route_map_used") is False, "question route map was used")
+    require(manifest.get("full_path_precomputed_for_agent") is False, "full path was precomputed for the Agent")
+    require(manifest.get("pathfinder_role") == "POST_HOC_VALIDATION_ONLY", "pathfinder was not limited to post-hoc validation")
     require(bool(manifest.get("answer")), "verified answer is empty")
     require(bool(manifest.get("skills_invoked")), "no KAC skill was invoked")
     require(bool(manifest.get("source_refs")), "verified answer has no source refs")
@@ -63,6 +67,25 @@ def main() -> None:
     require({item.get("skill_run_id") for item in skill_runs} == set(manifest.get("skill_run_ids", [])), "SkillRun IDs mismatch")
     require(all(item.get("implementation_origin") == "REIMPLEMENTED_FROM_IMPORTED_METHOD_CONTRACT" for item in skill_runs), "unexpected Skill implementation origin")
     require(all(not item.get("external_actions") for item in skill_runs), "a SkillRun recorded external action")
+    multi_anchor = len(traversal.get("anchor_ids", [])) >= 2
+    if multi_anchor:
+        require(any(event.get("event_type") == "relation_step_selected" for event in events), "Agent-selected relation step is absent")
+        require(traversal.get("status") == "COMPLETED", "multi-anchor traversal is not completed")
+        require(bool(traversal.get("selected_steps")), "traversal has no Agent-selected steps")
+        require(bool(traversal.get("active_path", {}).get("edge_ids")), "traversal has no active final edge path")
+        require(traversal.get("full_path_precomputed_for_agent") is False, "traversal claims a precomputed full path")
+        require(
+            traversal.get("post_hoc_validation", {}).get("algorithm_role") == "POST_HOC_VALIDATION_ONLY",
+            "traversal pathfinder role is not post-hoc only",
+        )
+        provenance_hash = traversal.get("skill_provenance_hash")
+        require(bool(provenance_hash), "traversal Skill provenance hash is missing")
+        require(
+            all(item.get("traversal_hash") == provenance_hash for item in skill_runs),
+            "SkillRun is not bound to the completed Agent traversal",
+        )
+        manifest_traversal = manifest.get("relation_traversal", {})
+        require(manifest_traversal.get("ledger_hash") == traversal.get("ledger_hash"), "manifest and traversal ledger disagree")
 
     db_path = root / ".state" / "supestar_agent.sqlite3"
     if db_path.exists():
@@ -88,6 +111,7 @@ def main() -> None:
             "model_identity.json":sha256(run_dir / "model_identity.json"),
             "events.json":sha256(run_dir / "events.json"),
             "run_manifest.json":sha256(run_dir / "run_manifest.json"),
+            **({"relation_traversal.json":sha256(traversal_path)} if traversal_path.exists() else {}),
             **{f"skills/{path.name}":sha256(path) for path in skill_files},
         },
         "failures":failures,

@@ -31,6 +31,10 @@ def main() -> None:
         failures.append("verified run model scope is not loopback")
     if manifest.get("internet_used") is not False:
         failures.append("verified run does not state internet_used=false")
+    if manifest.get("full_path_precomputed_for_agent") is not False:
+        failures.append("verified run does not prove full_path_precomputed_for_agent=false")
+    if manifest.get("pathfinder_role") != "POST_HOC_VALIDATION_ONLY":
+        failures.append("deterministic pathfinder was not limited to post-hoc validation")
     if external_web_urls:
         failures.append(f"web UI contains external asset URLs: {external_web_urls}")
     if "127.0.0.1" not in (root / "src/supestar_kac_agent/server.py").read_text(encoding="utf-8"):
@@ -44,6 +48,8 @@ def main() -> None:
         "server_default":"127.0.0.1:4177",
         "web_external_asset_urls":external_web_urls,
         "internet_used":manifest.get("internet_used"),
+        "full_path_precomputed_for_agent":manifest.get("full_path_precomputed_for_agent"),
+        "pathfinder_role":manifest.get("pathfinder_role"),
         "failures":failures,
     }
     print(json.dumps(report, ensure_ascii=False, indent=2))

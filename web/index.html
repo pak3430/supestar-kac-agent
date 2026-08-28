@@ -25,7 +25,7 @@
     <section class="hero">
       <p class="eyebrow">지식이 답에 머물지 않고, 다음 행동을 선택하는 구조</p>
       <h1>질문을 받으면 지식을 연결하고<br>원자 스킬을 실제로 실행합니다.</h1>
-      <p class="hero-copy">수페스타는 일반 답변을 먼저 만들지 않습니다. 로컬 Qwen이 CCS에서 개념과 관계를 관찰하고, 필요한 KAC 스킬을 선택·실행한 뒤 검증된 claim만 답변으로 공개합니다.</p>
+      <p class="hero-copy">수페스타는 일반 답변이나 전체 관계 경로를 먼저 만들지 않습니다. 로컬 Qwen이 현재 CCS의 1-hop 관계만 보고 edge를 한 단계씩 선택해 지식사슬을 만든 뒤, 필요한 KAC 스킬을 실행하고 검증된 claim만 공개합니다.</p>
       <div class="pipeline" aria-label="에이전트 실행 순서">
         <span>질문</span><i>→</i><span>Qwen 행동 선택</span><i>→</i><span>CCS 관찰</span><i>→</i><span>KAC SkillRun</span><i>→</i><span>검증 답변</span>
       </div>

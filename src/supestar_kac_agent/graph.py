@@ -107,6 +107,26 @@ class KnowledgeGraph:
         node_id = self.resolve(query)
         if not node_id:
             return self.observe(query)
+        related = self.neighbors(node_id)
+        return {
+            "status": "EXPANDED",
+            "concept_id": node_id,
+            "relations": related,
+            "applicable_skills": self.nodes[node_id].get("applicable_skills", []),
+            "graph_fingerprint": self.fingerprint,
+            "source_refs": sorted({ref for item in related for ref in item["source_refs"]}),
+        }
+
+    def neighbors(self, query: str, *, ordering_salt: str = "") -> list[dict[str, Any]]:
+        """Return only the directly adjacent relations for one concept.
+
+        This method deliberately never computes or returns a path to another
+        anchor. A run-specific salt changes presentation order without changing
+        the admitted relation set, which makes first-item routing detectable.
+        """
+        node_id = self.resolve(query)
+        if not node_id:
+            return []
         related = []
         for edge in self.edges.values():
             if edge["from"] == node_id:
@@ -125,18 +145,10 @@ class KnowledgeGraph:
                 "neighbor": {"id": neighbor_id, "label_ko": self.nodes[neighbor_id]["label_ko"]},
                 "source_refs": edge["source_refs"],
             })
-        related.sort(key=lambda item: item["evidence_id"])
-        result = {
-            "status": "EXPANDED",
-            "concept_id": node_id,
-            "relations": related,
-            "applicable_skills": self.nodes[node_id].get("applicable_skills", []),
-            "graph_fingerprint": self.fingerprint,
-            "source_refs": sorted({ref for item in related for ref in item["source_refs"]}),
-        }
-        if toward_query:
-            result["candidate_path"] = self.shortest_path(query, toward_query, bidirectional=True)
-        return result
+        related.sort(key=lambda item: hashlib.sha256(
+            f"{ordering_salt}:{item['evidence_id']}".encode("utf-8")
+        ).hexdigest())
+        return related
 
     def shortest_path(self, start_query: str, end_query: str, *, bidirectional: bool = False) -> dict[str, Any]:
         start, end = self.resolve(start_query), self.resolve(end_query)

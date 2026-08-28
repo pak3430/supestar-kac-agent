@@ -159,6 +159,7 @@ def verify_candidate(
     evidence: dict[str, dict[str, Any]],
     skill_runs: list[dict[str, Any]],
     graph: KnowledgeGraph,
+    traversal: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     missing: list[str] = []
     unsupported: list[str] = []
@@ -171,17 +172,26 @@ def verify_candidate(
         missing.append("claims")
     observed_concepts = {item_id.split(":", 1)[1] for item_id in evidence if item_id.startswith("concept:")}
     observed_edges = {item_id for item_id in evidence if item_id.startswith("edge:")}
+    traversal = traversal or {}
+    selected_traversal_edges = {
+        str(edge_id) for edge_id in traversal.get("active_path", {}).get("edge_ids", [])
+        if str(edge_id) in graph.edges
+    }
     for anchor in anchors:
         if anchor not in observed_concepts:
             missing.append(f"anchor_observation:{anchor}")
-    if len(anchors) >= 2 and not anchors_connected(anchors, observed_edges, graph):
-        missing.append("observed_relation_path_between_anchors")
+    if len(anchors) >= 2:
+        if traversal.get("status") != "COMPLETED":
+            missing.append("completed_agentic_relation_traversal")
+        if not anchors_connected(anchors, selected_traversal_edges, graph):
+            missing.append("agent_selected_relation_path_between_anchors")
     if not skill_runs:
         missing.append("executed_kac_skill")
     cited: set[str] = set()
     claimed_concepts: set[str] = set()
     uncovered_claim_concepts: dict[str, list[str]] = {}
     repair_relation_evidence_by_claim: dict[str, list[str]] = {}
+    claim_question_anchor_sets: list[set[str]] = []
     for index, claim in enumerate(claims):
         if not isinstance(claim, dict) or not str(claim.get("text", "")).strip():
             missing.append(f"claim_text:{index}")
@@ -202,11 +212,12 @@ def verify_candidate(
         mentioned_concepts = graph.anchor_ids(claim_text)
         claimed_concepts.update(mentioned_concepts)
         mentioned_question_anchors = [anchor for anchor in anchors if anchor in mentioned_concepts]
+        claim_question_anchor_sets.append(set(mentioned_question_anchors))
         if len(mentioned_question_anchors) >= 2:
             cited_edges = {str(evidence_id) for evidence_id in ids if str(evidence_id).startswith("edge:")}
             if not anchors_connected(mentioned_question_anchors, cited_edges, graph):
                 missing.append(f"claim_relation_path:{index}")
-                repair_path = observed_path_edge_ids(mentioned_question_anchors, observed_edges, graph)
+                repair_path = observed_path_edge_ids(mentioned_question_anchors, selected_traversal_edges, graph)
                 if repair_path:
                     repair_relation_evidence_by_claim[str(index)] = repair_path
         uncovered = [
@@ -239,6 +250,22 @@ def verify_candidate(
     }
     if skill_runs and not (executed_skill_run_ids & cited_skill_run_ids):
         missing.append("cited_executed_skill_output")
+    if len(anchors) >= 2:
+        if not any(set(anchors).issubset(anchor_set) for anchor_set in claim_question_anchor_sets):
+            missing.append("relationship_claim_covering_all_question_anchors")
+        cited_selected_edges = {
+            evidence_id for evidence_id in cited
+            if evidence_id in selected_traversal_edges
+        }
+        if not anchors_connected(anchors, cited_selected_edges, graph):
+            missing.append("answer_cited_full_agent_relation_path")
+    if len(anchors) >= 2 and skill_runs:
+        expected_traversal_hash = traversal.get("skill_provenance_hash")
+        if not expected_traversal_hash or not any(
+            run.get("traversal_hash") == expected_traversal_hash
+            for run in skill_runs
+        ):
+            missing.append("skill_run_missing_agent_traversal_provenance")
     verdict = "PASS" if not missing and not unsupported and not forbidden else "REVIEW"
     verified_answer = " ".join(
         str(claim.get("text", "")).strip()
@@ -265,6 +292,8 @@ def verify_candidate(
         "anchor_ids": anchors,
         "observed_concept_ids": sorted(observed_concepts),
         "observed_edge_ids": sorted(observed_edges),
+        "agent_selected_edge_ids": sorted(selected_traversal_edges),
+        "relation_traversal_status":traversal.get("status", "NOT_AVAILABLE"),
         "executed_skill_names": [run["skill_name"] for run in skill_runs],
         "cited_skill_run_ids": sorted(cited_skill_run_ids),
         "cited_evidence_ids": sorted(cited),

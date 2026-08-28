@@ -24,6 +24,14 @@ const eventLabels = {
   direct_answer_rejected: ["직접 답변 차단", "근거 제출 형식이 아니므로 답변을 공개하지 않았습니다."],
   candidate_structured: ["로컬 구조화", "같은 Qwen이 자연어 초안을 근거 claim JSON으로 변환했습니다."],
   action_structured: ["로컬 행동 복구", "자연어로 이탈한 Qwen을 같은 로컬 모델의 구조화 출력으로 도구 행동에 복귀시켰습니다."],
+  trusted_skill_context_bound: ["신뢰 요청 문맥 결합", "원 질문·사용자 역할·기준일을 Skill 입력에 서버 값으로 결합했습니다."],
+  tool_arguments_normalized: ["로컬 도구 인자 정규화", "Qwen이 고른 허용 edge는 그대로 두고 도구 필드명만 안전하게 맞췄습니다."],
+  parallel_traversal_actions_blocked: ["동시 관계 이동 차단", "한 turn에는 하나의 관계 행동만 허용해 Action→Observation 경계를 지켰습니다."],
+  relation_traversal_started: ["1-hop 관계 추적 시작", "전체 경로 없이 현재 node의 직접 관계만 관찰했습니다."],
+  relation_step_selected: ["AI 관계 1단계 선택", "Local Qwen이 직전 Observation의 실제 edge 하나를 선택했습니다."],
+  relation_step_backtracked: ["AI 관계 되돌아가기", "막힌 경로에서 이전 node로 돌아가 다른 관계를 고를 수 있게 했습니다."],
+  relation_traversal_completed: ["AI 관계사슬 완성", "AI가 선택한 edge들로 질문 anchor가 연결된 뒤 탐색을 종료했습니다."],
+  relation_traversal_stopped: ["관계 추적 안전 중단", "선택한 edge로 anchor를 연결하지 못해 답변 경로를 만들지 않았습니다."],
   candidate_evidence_repaired: ["관찰 근거 인용 복구", "문장 내용은 바꾸지 않고 검증기가 지정한 이미 관찰된 evidence_id만 보완했습니다."],
   candidate_evidence_normalized: ["SkillRun ID 정규화", "실제로 실행된 SkillRun과 정확히 일치하는 ID에 누락된 skill: namespace만 복구했습니다."],
   repeated_verification_blocked: ["반복 오류 차단", "같은 검증 오류에서는 스킬을 다시 실행하지 않고 인용 형식 수정만 허용합니다."],
@@ -55,6 +63,7 @@ function addMessage(role, text, result = null) {
     [
       `MODEL ${result.model_identity?.model || "unknown"}`,
       `${result.skills_invoked?.length || 0} SKILL RUN`,
+      `${result.relation_traversal?.selected_steps?.length || 0} AI EDGE STEPS`,
       `${result.source_refs?.length || 0} SOURCES`,
       result.local_llm_verified ? "LOOPBACK VERIFIED" : "MODEL UNVERIFIED",
     ].forEach((label) => {
@@ -77,6 +86,14 @@ function summarizeEvent(event) {
   if (event.event_type === "verification") return `${event.verdict} · 누락 ${(event.missing_requirements || []).length} · 미관찰 인용 ${(event.unsupported_evidence_ids || []).length}`;
   if (event.event_type === "candidate_structured") return `JSON schema adapter · attempt ${event.adapter_attempt || 1}`;
   if (event.event_type === "action_structured") return `${event.tool_name} · JSON schema action adapter`;
+  if (event.event_type === "trusted_skill_context_bound") return `${event.skill_name} · ${(event.bindings || []).map((item) => item.field).join(" · ")}`;
+  if (event.event_type === "tool_arguments_normalized") return `${event.tool_name} · ${(event.normalizations || []).map((item) => `${item.from} → ${item.to}`).join(" · ")}`;
+  if (event.event_type === "parallel_traversal_actions_blocked") return `허용 1개 · 차단 ${(event.blocked_tool_names || []).join(" · ") || "추가 관계 행동"}`;
+  if (["relation_traversal_started", "relation_step_selected", "relation_step_backtracked", "relation_traversal_completed", "relation_traversal_stopped"].includes(event.event_type)) {
+    const traversal = event.traversal || {};
+    const path = traversal.active_path || {};
+    return `${event.tool_status || traversal.status || ""} · 현재 ${traversal.current_concept_id || "-"} · 선택 edge ${(path.edge_ids || []).length}개`;
+  }
   if (event.event_type === "candidate_evidence_repaired") return `${(event.added_evidence_ids || []).join(" · ")} 추가`;
   if (event.event_type === "candidate_evidence_normalized") return `${(event.replacements || []).map((item) => `${item.from} → ${item.to}`).join(" · ")}`;
   if (event.event_type === "repeated_verification_blocked") return `동일 오류 ${event.occurrences}회 · 스킬 재실행 금지`;
@@ -90,7 +107,7 @@ function addTrace(event) {
   if (placeholder) placeholder.remove();
   const [title, fallback] = eventLabels[event.event_type] || [event.event_type, ""];
   const item = document.createElement("li");
-  item.className = `trace-item ${["tool_action", "action_structured"].includes(event.event_type) ? "action" : ""} ${["verification", "candidate_evidence_repaired", "candidate_evidence_normalized", "repeated_verification_blocked"].includes(event.event_type) ? "verify" : ""} ${event.event_type === "model_error" ? "error" : ""}`;
+  item.className = `trace-item ${["tool_action", "action_structured", "relation_traversal_started", "relation_step_selected", "relation_step_backtracked"].includes(event.event_type) ? "action" : ""} ${["verification", "candidate_evidence_repaired", "candidate_evidence_normalized", "repeated_verification_blocked", "relation_traversal_completed"].includes(event.event_type) ? "verify" : ""} ${["model_error", "relation_traversal_stopped"].includes(event.event_type) ? "error" : ""}`;
   const strong = document.createElement("strong");
   strong.textContent = `${String(event.sequence || "").padStart(2, "0")} · ${title}`;
   const detail = document.createElement("p");

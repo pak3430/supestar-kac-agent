@@ -130,7 +130,7 @@
     <section class="hero">
       <p class="eyebrow">ACTUAL INTERNAL RUNTIME</p>
       <h1>질문에 답하는 것이 아니라,<br>관찰하고 실행한 뒤 검증합니다.</h1>
-      <p>Local Qwen이 정해진 답안을 찾는 구조가 아닙니다. 질문에서 발견된 개념 후보를 출발점으로 현재 Observation을 보고 다음 행동을 고르고, 실제 KAC 원자 스킬의 결과를 근거로 답변 후보를 제출합니다.</p>
+      <p>Local Qwen이 정해진 답안이나 미리 계산된 전체 경로를 받는 구조가 아닙니다. 현재 node의 1-hop 관계만 보고 edge 하나를 고르며, 그 선택의 연속으로 만든 지식사슬과 실제 KAC 원자 스킬 결과를 근거로 답변 후보를 제출합니다.</p>
       <div class="badges">
         <span class="badge">LOCAL QWEN · OLLAMA LOOPBACK</span>
         <span class="badge">CCS 29 NODES · 31 EDGES</span>
@@ -160,14 +160,14 @@
         <article class="step model">
           <span class="number">3</span>
           <h3>Local Qwen 행동 선택</h3>
-          <p>현재 증거 단계에서 허용된 범위 안에서 남은 개념·관계 방향·스킬과 입력을 선택합니다.</p>
+          <p>현재 증거 단계에서 허용된 범위 안에서 1-hop edge 하나·backtrack·스킬과 입력을 선택합니다.</p>
           <small>Ollama · qwen2.5 · loopback</small>
         </article>
         <article class="step">
           <span class="number">4</span>
           <h3>CCS 관찰</h3>
           <p>개념 정의와 근거 edge를 도구로 읽고 Observation을 Qwen에 돌려줍니다.</p>
-          <small>observe_concept · expand_relations</small>
+          <small>observe_neighbors · select_relation_step · backtrack_relation_step</small>
         </article>
         <article class="step skill">
           <span class="number">5</span>
@@ -182,7 +182,7 @@
           <small>submit_answer_candidate → Verifier</small>
         </article>
       </div>
-      <div class="loop"><b>↺</b> 필수 anchor 관찰 → 관계 연결 → Skill 실행 → 제출 순서로 진행하며, 완료된 관찰과 동일 SkillRun은 재사용합니다.</div>
+      <div class="loop"><b>↺</b> 필수 anchor 관찰 → 현재 1-hop 후보 → Qwen edge 선택 → 새 Observation을 반복한 뒤 Skill을 실행합니다.</div>
       <div class="decision">
         <div class="pass"><strong>KAC Skill 판정</strong>PROCEED · REVIEW · STOP</div>
         <div class="review"><strong>Verifier 판정</strong>PASS · REVIEW</div>
@@ -199,7 +199,7 @@
         </div>
         <div class="layer">
           <strong>CCS 지식 환경</strong>
-          <p>ESG·SDGs·Scope·탄소시장·산림탄소 개념과 출처가 있는 관계를 관찰할 수 있는 그래프입니다. 벡터 문서 검색 결과를 그대로 붙이는 구조가 아닙니다.</p>
+          <p>ESG·SDGs·Scope·탄소시장·산림탄소 개념과 출처가 있는 현재 node의 1-hop 관계만 관찰합니다. 후보로 보기만 한 edge는 답변 근거가 되지 않습니다.</p>
         </div>
         <div class="layer">
           <strong>KAC 원자 스킬</strong>
@@ -225,14 +225,14 @@
     </div>
 
     <section class="card example">
-      <h2>실제 PASS 예시 · 구매 전력은 Scope 몇인가?</h2>
-      <p>Local Qwen 실실행 기록 <code>agent-run-d4b3d7d3…</code>의 핵심만 단순화했습니다.</p>
+      <h2>실제 PASS · ESG와 탄소크레딧의 관계</h2>
+      <p>Local Qwen run <code>agent-run-89720b1c…</code>의 실제 선택을 단순화했습니다. 전체 경로는 사전에 제공되지 않았습니다.</p>
       <div class="example-flow">
-        <div class="example-step"><span>QUESTION</span><strong>외부 전력회사에서 구매한 전기를 사무실에서 사용</strong></div>
-        <div class="example-step"><span>OBSERVE</span><strong>운영 경계<br><code>OPERATIONAL_BOUNDARY</code></strong></div>
-        <div class="example-step"><span>EXECUTE</span><strong><code>scope-activity-classification</code></strong></div>
-        <div class="example-step"><span>SKILL OUTPUT</span><strong><code>SCOPE_2 · PROCEED</code></strong></div>
-        <div class="example-step"><span>VERIFIER</span><strong>개념 + SkillRun + 출처 연결<br><code>PASS</code></strong></div>
+        <div class="example-step"><span>QUESTION</span><strong>ESG 관점에서 탄소크레딧과 어떤 관계인가?</strong></div>
+        <div class="example-step"><span>FIRST CHOICE</span><strong>탄소크레딧 → 산림탄소사업<br><code>QWEN SELECTED</code></strong></div>
+        <div class="example-step"><span>ACTIVE PATH</span><strong>탄소크레딧 → 산림탄소 → SDG 13 → SDGs → ESG</strong></div>
+        <div class="example-step"><span>SKILL RUN</span><strong><code>esg-carbon-action-path</code><br>traversal hash 결합</strong></div>
+        <div class="example-step"><span>VERIFIER</span><strong>54 events · local only<br><code>PASS</code></strong></div>
       </div>
     </section>
 

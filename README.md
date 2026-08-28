@@ -1,12 +1,12 @@
 # Supestar KAC Agent
 
-Local Qwen이 CCS 지식을 관찰하고 관계를 확장한 뒤, Stage 1~5에서 파생된 KAC 원자 스킬을 선택·실행하는 **로컬 지식행동사슬 에이전트**입니다.
+Local Qwen이 현재 CCS 지식의 1-hop 관계만 관찰하고 다음 edge를 한 단계씩 선택한 뒤, Stage 1~5에서 파생된 KAC 원자 스킬을 선택·실행하는 **로컬 지식행동사슬 에이전트**입니다.
 
 이 저장소의 핵심은 “지식 JSON을 검색해 문장을 조립하는 챗봇”이 아닙니다. Qwen이 매 turn의 Observation을 보고 다음 행동을 고르고, 선택한 스킬이 실제 Python Runtime에서 실행되며, 검증된 claim만 사용자에게 공개됩니다.
 
 ## 현재 구현 상태
 
-`AUTONOMOUS_KAC_AGENT_VERIFIED`
+`AGENTIC_RELATION_TRAVERSAL_VERIFIED`
 
 - Local Qwen `qwen2.5:14b-instruct-q4_K_M` 실제 추론
 - Ollama loopback 전용 연결과 model digest 기록
@@ -14,17 +14,23 @@ Local Qwen이 CCS 지식을 관찰하고 관계를 확장한 뒤, Stage 1~5에�
 - 실행 가능한 KAC 원자 스킬 6개
 - v2 Stage 산출물 60개 바이트 동일성 검증
 - 질문별 고정 route map 없음
+- 전체 경로 사전 계산 없음: 매 turn 현재 node의 1-hop 관계만 공개
+- Local Qwen의 `관계 선택 → Observation → 다음 선택` 반복과 backtrack 지원
+- 결정론적 최단경로는 탐색 종료 뒤 사후 검증에만 사용
+- AI 선택 관계사슬의 hash가 실제 SkillRun에 결합
 - 도구 행동·Observation·SkillRun·Verifier 전체 기록
 - 증거 lifecycle gate로 완료된 관찰 단계 재진입 차단
 - 원 질문·사용자 역할·기준일은 모델 추측값이 아니라 서버 요청값으로 Skill에 결합
 - 실행된 SkillRun ID namespace 정규화와 동일 입력 SkillRun 중복 실행 방지
 - 답변 후보의 evidence ID를 현재 관찰 목록으로 제한
-- 관계 claim은 관찰된 양쪽 anchor 사이의 전체 edge 경로를 인용해야 통과
+- 최종 제출은 누적 traversal transcript 대신 같은 Local Qwen의 compact evidence JSON 직렬화로 timeout 방지
+- 매 turn은 전체 대화 재전송 대신 현재 1-hop 후보·활성 경로·evidence의 compact state를 사용
+- 관계 claim은 AI가 실제 선택한 양쪽 anchor 사이의 전체 edge 경로를 인용해야 통과
 - SQLite 감사 기록과 파일 기반 run evidence
 - 실시간 실행 trace 웹 UI
-- 자동 테스트 30개, 계약 검증 질문 20개와 실제 Local Qwen PASS run
+- 자동 테스트 39개, 계약 검증 질문 20개
 
-최신 ESG–탄소크레딧 오류 회귀 검증은 [`proof/validation_esg_carbon_credit_handler_fix_live_run.json`](proof/validation_esg_carbon_credit_handler_fix_live_run.json)에 있습니다. 보일러 Scope 1 증거는 [`proof/validation_scope1_max_steps_fix_live_run.json`](proof/validation_scope1_max_steps_fix_live_run.json), 기존 검증 snapshot은 [`proof/latest_verified_run.json`](proof/latest_verified_run.json), 실제 브라우저 검수 기록은 [`proof/browser_verification.json`](proof/browser_verification.json), 구매 전력 Scope 2 PASS 증거는 [`proof/validation_scope2_live_run.json`](proof/validation_scope2_live_run.json)입니다.
+최신 단계별 AI 관계 추적 증명은 [`proof/validation_agentic_relation_traversal_live_run.json`](proof/validation_agentic_relation_traversal_live_run.json)에 있습니다. 기존 ESG–탄소크레딧 회귀 증거는 [`proof/validation_esg_carbon_credit_handler_fix_live_run.json`](proof/validation_esg_carbon_credit_handler_fix_live_run.json), 보일러 Scope 1 증거는 [`proof/validation_scope1_max_steps_fix_live_run.json`](proof/validation_scope1_max_steps_fix_live_run.json), 구매 전력 Scope 2 증거는 [`proof/validation_scope2_live_run.json`](proof/validation_scope2_live_run.json)입니다.
 
 ## 실제 실행 구조
 
@@ -33,7 +39,10 @@ Local Qwen이 CCS 지식을 관찰하고 관계를 확장한 뒤, Stage 1~5에�
   ↓
 Local Qwen ── 다음 행동을 선택
   ├─ observe_concept
-  ├─ expand_relations
+  ├─ observe_neighbors          # 현재 node의 1-hop만 반환
+  ├─ select_relation_step       # Qwen이 실제 edge 하나 선택
+  ├─ backtrack_relation_step    # 막힌 분기에서 되돌아감
+  ├─ stop_relation_traversal    # 선택 edge로 anchor 연결 후 종료
   ├─ invoke_kac_skill
   ├─ request_missing_evidence
   └─ submit_answer_candidate
@@ -44,7 +53,8 @@ Local Qwen이 다음 행동 재선택
   ↓
 Verifier
   ├─ anchor 관찰 여부
-  ├─ 관계 edge 연결 여부
+  ├─ AI 선택 edge로 anchor가 연결됐는지
+  ├─ SkillRun이 동일 traversal hash를 가졌는지
   ├─ SkillRun 존재 여부
   ├─ claim ↔ evidence ↔ source 연결
   └─ 금지된 개념 혼동 검사
@@ -54,9 +64,9 @@ PASS claim만 최종 답변으로 조립
 
 Qwen이 자연어를 반환하고 제출 도구 호출 형식에 실패할 때는 같은 로컬 Qwen의 JSON Schema 출력이 claim 직렬화만 담당합니다. 도메인 행동과 스킬 선택은 그대로 tool-calling Agent loop에서 이루어집니다.
 
-스킬 실행 전 자연어로 이탈하면 같은 로컬 Qwen의 구조화 행동 어댑터가 현재 lifecycle gate에서 허용된 도구 하나를 다시 선택합니다. 런타임은 `필수 anchor 관찰 → anchor 관계 연결 → 스킬 실행 → 제출`이라는 공통 증거 완료 순서만 제한하며, 남은 개념·관계 방향·스킬·도메인 입력은 Qwen이 선택합니다. 원 질문·사용자 역할·기준일은 모델이 바꾸면 안 되는 요청 봉투 값이므로 서버가 Skill 호출에 결합합니다. 질문별 route map은 만들지 않습니다.
+스킬 실행 전 자연어로 이탈하면 같은 로컬 Qwen의 구조화 행동 어댑터가 현재 lifecycle gate에서 허용된 도구 하나를 다시 선택합니다. 런타임은 `필수 anchor 관찰 → 1-hop 관계 선택 반복 → 탐색 완료 → 스킬 실행 → 제출`이라는 공통 증거 완료 순서만 제한합니다. 전체 경로나 다음 node는 주지 않으며, 남은 관계 edge·되돌아가기·스킬·도메인 입력은 Qwen이 선택합니다. 원 질문·사용자 역할·기준일은 모델이 바꾸면 안 되는 요청 봉투 값이므로 서버가 Skill 호출에 결합합니다. 질문별 route map은 만들지 않습니다.
 
-Qwen의 claim 내용은 맞지만 이미 관찰한 개념·관계 경로·실행 Skill evidence ID만 빠진 경우, 검증기가 지정한 관찰 ID만 기계적으로 추가해 다시 검증합니다. 이 복구는 문장·판정·지식을 수정하지 않으며, 미관찰 근거·잘못된 내용·금지된 혼동은 자동 보정하지 않습니다.
+Qwen의 claim 내용은 맞지만 이미 선택한 개념·관계 경로·실행 Skill evidence ID만 빠진 경우, 검증기가 지정한 관찰 ID만 기계적으로 추가해 다시 검증합니다. 후보로 보기만 하고 선택하지 않은 edge는 evidence가 아니므로 추가할 수 없습니다. 이 복구는 문장·판정·지식을 수정하지 않으며, 미관찰 근거·잘못된 내용·금지된 혼동은 자동 보정하지 않습니다.
 
 ## KAC 원자 스킬
 
@@ -123,7 +133,24 @@ python3 scripts/verify_agent_run.py --run-dir runs/<PASS_RUN_ID>
 python3 scripts/verify_locality.py --run-dir runs/<PASS_RUN_ID>
 ```
 
-`MAX_STEPS_REACHED`가 발생했던 동일 보일러 질문의 수정 후 Scope 1 run은 다음을 증명했습니다.
+### 최신 실제 Local Qwen 단계별 탐색 증명
+
+- Run ID: `agent-run-89720b1c-e30a-4656-9f7e-a46d522faa40`
+- 질문: `ESG 관점에서 탄소크레딧과 어떤 상관관계가 있습니까?`
+- Qwen의 turn별 선택: `탄소크레딧 → 산림탄소사업 → SDG 13 → SDGs → ESG`
+- 활성 경로: `탄소크레딧 → 산림탄소사업 → SDG 13 → SDGs → ESG`
+- 전체 경로 사전 계산: `false`
+- 최단경로 알고리즘: 탐색 완료 뒤 `POST_HOC_VALIDATION_ONLY`
+- SkillRun: `esg-carbon-action-path`, traversal hash 일치
+- 최종 상태: `PASS`, 54개 event, Local Qwen inference 11회, 인터넷 사용 `false`
+- 강화된 관계 검사: ESG·탄소크레딧을 함께 말한 한 claim이 활성 4-edge 전체를 인용
+- 독립 run 검증·locality 검증: 모두 `PASS`
+
+증명 snapshot은 [`proof/validation_agentic_relation_traversal_live_run.json`](proof/validation_agentic_relation_traversal_live_run.json)에 있습니다.
+
+기존 proof 파일은 단계별 AI 관계 추적 개편 전 Runtime의 회귀 증거입니다.
+
+`MAX_STEPS_REACHED`가 발생했던 동일 보일러 질문의 기존 Scope 1 run은 다음을 증명했습니다.
 
 - `ACTIVITY_DATA`와 `OPERATIONAL_BOUNDARY`를 각각 한 번만 관찰
 - 실제 CCS edge로 두 anchor를 연결한 뒤에만 다음 단계 진입
@@ -132,12 +159,12 @@ python3 scripts/verify_locality.py --run-dir runs/<PASS_RUN_ID>
 - 첫 후보의 누락된 운영 경계 인용만 관찰 근거로 제한 보완
 - 5단계에서 최종 Scope 1 claim `PASS`, 인터넷 사용 `false`
 
-`grounded ESG action path is unavailable`가 발생했던 ESG–탄소크레딧 질문도 같은 API에서 다시 실행했습니다.
+`grounded ESG action path is unavailable`가 발생했던 ESG–탄소크레딧 질문의 기존 회귀 run은 다음을 증명했습니다.
 
-- `ESG → SDGs → SDG 13 ↔ 산림탄소 프로젝트 → 탄소크레딧`의 관찰 경로 확인
+- `ESG → SDGs → SDG 13 ↔ 산림탄소 프로젝트 → 탄소크레딧`의 경로 확인
 - 역방향으로 저장된 유효 edge는 양방향 관계 탐색으로 안전하게 연결
 - `esg-carbon-action-path`를 신뢰 요청 문맥과 함께 실제 실행
-- 관계 claim에 전체 관찰 경로를 제한 보완한 뒤 최종 `PASS`
+- 관계 claim에 당시 관찰된 전체 경로를 제한 보완한 뒤 최종 `PASS`
 - Local Qwen loopback 확인, 인터넷 사용 `false`, SkillRun 1개 보존
 
 웹 화면의 **검증 질문 더 보기**에는 개념 관계, Scope 1·2·3, 탄소시장, 산림탄소, 거래·안전 질문이 들어 있습니다. 원본은 [`validation/question_bank.json`](validation/question_bank.json)입니다. 이 파일은 예시와 회귀 검증 전용이며 Agent 답변 입력이나 질문별 route map으로 사용되지 않습니다.
@@ -147,7 +174,7 @@ python3 scripts/verify_locality.py --run-dir runs/<PASS_RUN_ID>
 - 외부 인터넷·검색·원격 LLM API를 사용하지 않습니다.
 - 결제·거래·등록부 변경을 실행하지 않습니다.
 - SQLite는 지식 DB가 아니라 run 감사 저장소입니다.
-- `knowledge/graph.json`은 벡터 RAG 문서 묶음이 아니라 도구로 관찰하는 CCS 환경입니다.
+- `knowledge/graph.json`은 벡터 RAG 문서 묶음이 아니라 1-hop 도구로 관찰하는 CCS 환경입니다.
 - 현재 그래프는 29개 개념과 31개 관계 범위입니다. 모든 ESG 지식을 안다고 주장하지 않습니다.
 - Skill의 `PROCEED`는 코드 실행 완료이지 실제 사회·환경 Outcome의 발생을 뜻하지 않습니다.
 - 로컬 14.8B 모델이므로 한 질문에 수 분이 걸릴 수 있습니다.
