@@ -61,7 +61,9 @@ def _system_prompt(*, anchors: list[str], catalog: list[dict[str, Any]], role: s
         "최종 후보 전에는 관련 KAC Skill을 최소 하나 실제 실행하세요. 입력이 부족하면 Skill의 REVIEW를 관찰하고 그 한계를 답변에 반영하세요.",
         "최종 답변은 반드시 submit_answer_candidate 도구로 제출하고, claim마다 Observation의 정확한 evidence_id를 적으세요.",
         "answer는 초안입니다. 외부에 공개되는 최종 답변은 검증을 통과한 claim text만 조립하므로 각 claim을 완전한 문장으로 쓰세요.",
+        "claims 전체에서 질문의 anchor 후보를 모두 직접 다루고, 실제 실행된 SkillRun evidence_id를 최소 하나 반드시 인용하세요.",
         "claim에 언급한 각 CCS 개념은 그 개념에 직접 닿는 concept·edge·Skill evidence_id를 인용하세요.",
+        "하나의 claim에서 질문 anchor 사이의 관계를 말하면 주변 edge 하나가 아니라, 관찰된 두 anchor 사이의 전체 edge 경로를 인용하세요.",
         "검증기가 REVIEW를 반환하면 누락된 관찰이나 Skill을 수행한 뒤 새 후보를 제출하세요.",
         "unsupported_evidence_ids는 사용자에게 물을 항목이 아니라 아직 도구로 관찰하지 않은 시스템 근거입니다. 관련 개념·관계를 다시 관찰하세요.",
         "빈 응답은 허용되지 않습니다. 매 turn에는 현재 상태에 필요한 도구를 호출하세요.",
@@ -79,23 +81,30 @@ def _repair_observed_concept_citations(
 ) -> dict[str, Any] | None:
     """Add only verifier-proposed, already observed evidence IDs.
 
-    This does not rewrite a claim or invent knowledge. It is limited to the case
-    where every remaining failure is an uncovered concept citation or the
-    grounding-overlap consequence of that missing citation, and the verifier
-    has an observed repair ID for that exact concept.
+    This does not rewrite a claim or invent knowledge. It is limited to missing
+    citations where the verifier has already identified an observed concept,
+    relation path, or executed SkillRun evidence ID for that exact claim.
     """
     missing = verification.get("missing_requirements", [])
     uncovered_requirements = [
         item for item in missing
         if str(item).startswith("claim_uncovered_concept:")
     ]
+    relation_requirements = [
+        item for item in missing
+        if str(item).startswith("claim_relation_path:")
+    ]
+    needs_executed_skill_citation = "cited_executed_skill_output" in missing
     if (
-        not uncovered_requirements
-        or verification.get("unsupported_evidence_ids")
+        not uncovered_requirements and not relation_requirements
+    ) or (
+        verification.get("unsupported_evidence_ids")
         or verification.get("forbidden_confusions")
         or not all(
             str(item).startswith("claim_uncovered_concept:")
             or str(item).startswith("claim_grounding_overlap:")
+            or str(item).startswith("claim_relation_path:")
+            or str(item) == "cited_executed_skill_output"
             for item in missing
         )
     ):
@@ -114,11 +123,38 @@ def _repair_observed_concept_citations(
             return None
         evidence_ids = claims[index].get("evidence_ids")
         evidence_ids = list(evidence_ids) if isinstance(evidence_ids, list) else []
-        preferred = next((value for value in candidates if str(value).startswith("concept:")), candidates[0])
+        stable_skill_evidence = next(
+            (
+                value for value in candidates
+                if str(value).startswith("skill:")
+                and not str(value).startswith("skill:skill-run-")
+            ),
+            None,
+        )
+        if needs_executed_skill_citation and stable_skill_evidence:
+            preferred = stable_skill_evidence
+            needs_executed_skill_citation = False
+        else:
+            preferred = next((value for value in candidates if str(value).startswith("concept:")), candidates[0])
         if preferred not in evidence_ids:
             evidence_ids.append(preferred)
             claims[index]["evidence_ids"] = evidence_ids
             changed = True
+    relation_repair_map = verification.get("repair_relation_evidence_by_claim", {})
+    for item in relation_requirements:
+        index = int(str(item).rsplit(":", 1)[1])
+        if index >= len(claims) or not isinstance(claims[index], dict):
+            return None
+        path_evidence_ids = relation_repair_map.get(str(index), [])
+        if not path_evidence_ids:
+            return None
+        evidence_ids = claims[index].get("evidence_ids")
+        evidence_ids = list(evidence_ids) if isinstance(evidence_ids, list) else []
+        for evidence_id in path_evidence_ids:
+            if evidence_id not in evidence_ids:
+                evidence_ids.append(evidence_id)
+                changed = True
+        claims[index]["evidence_ids"] = evidence_ids
     return repaired if changed else None
 
 
@@ -148,6 +184,39 @@ def _normalize_executed_skill_evidence_ids(
             values.append(replacement)
         claim["evidence_ids"] = values
     return normalized, replacements
+
+
+def _bind_trusted_skill_context(
+    arguments: dict[str, Any],
+    *,
+    question: str,
+    role: str,
+    as_of_date: str,
+    catalog_by_name: dict[str, dict[str, Any]],
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """Bind request-envelope context that the model must not guess or alter."""
+    bound = deepcopy(arguments)
+    skill_name = str(bound.get("skill_name", ""))
+    contract = catalog_by_name.get(skill_name, {})
+    accepted_inputs = set(contract.get("required_inputs", [])) | set(contract.get("optional_inputs", []))
+    inputs = bound.get("inputs") if isinstance(bound.get("inputs"), dict) else {}
+    inputs = dict(inputs)
+    changes: list[dict[str, Any]] = []
+    for field, trusted_value in (
+        ("question", question),
+        ("userRole", role),
+        ("asOfDate", as_of_date),
+    ):
+        if field not in accepted_inputs or inputs.get(field) == trusted_value:
+            continue
+        changes.append({
+            "field":field,
+            "model_value":inputs.get(field),
+            "bound_value":trusted_value,
+        })
+        inputs[field] = trusted_value
+    bound["inputs"] = inputs
+    return bound, changes
 
 
 def _lifecycle_gate(
@@ -448,6 +517,7 @@ def run_agent(
             force_submit_next = False
             tool_messages = []
             completed = False
+            fatal_tool_error: str | None = None
             definition_by_name = {
                 item["function"]["name"]:item["function"]
                 for item in definitions
@@ -457,6 +527,23 @@ def run_agent(
                 function = call.get("function") or {}
                 tool_name = str(function.get("name", ""))
                 arguments = function.get("arguments") if isinstance(function.get("arguments"), dict) else {}
+                context_bindings: list[dict[str, Any]] = []
+                if tool_name == "invoke_kac_skill":
+                    arguments, context_bindings = _bind_trusted_skill_context(
+                        arguments,
+                        question=question,
+                        role=role,
+                        as_of_date=as_of_date,
+                        catalog_by_name=environment.catalog_by_name,
+                    )
+                    if context_bindings:
+                        emit({
+                            "event_type":"trusted_skill_context_bound",
+                            "step":step,
+                            "skill_name":arguments.get("skill_name"),
+                            "bindings":context_bindings,
+                            "rule":"REQUEST_ENVELOPE_OVERRIDES_MODEL_ARGUMENTS",
+                        })
                 action = {
                     "event_type":"tool_action",
                     "step":step,
@@ -494,7 +581,18 @@ def run_agent(
                 elif tool_calls_used > max_tool_calls:
                     observation = {"status":"STOP","error":"TOOL_CALL_BUDGET_EXCEEDED"}
                 else:
-                    observation = environment.execute(tool_name, arguments)
+                    try:
+                        observation = environment.execute(tool_name, arguments)
+                    except Exception as error:
+                        observation = {
+                            "status":"STOP",
+                            "error":"UNHANDLED_TOOL_EXECUTION_ERROR",
+                            "tool_name":tool_name,
+                            "error_type":type(error).__name__,
+                            "error_message":str(error)[:500],
+                        }
+                if observation.get("status") == "STOP" and observation.get("error"):
+                    fatal_tool_error = str(observation["error"])
                 if tool_name == "submit_answer_candidate" and observation.get("status") == "CANDIDATE_RECEIVED":
                     candidate = observation["candidate"]
                     candidate, evidence_replacements = _normalize_executed_skill_evidence_ids(
@@ -549,7 +647,7 @@ def run_agent(
                         emit({
                             "event_type":"candidate_evidence_repaired",
                             "step":step,
-                            "repair_type":"OBSERVED_CONCEPT_CITATIONS_ONLY",
+                            "repair_type":"OBSERVED_EVIDENCE_CITATIONS_ONLY",
                             "before_candidate_hash":_hash(candidate),
                             "after_candidate_hash":_hash(repaired_candidate),
                             "added_evidence_ids":sorted(
@@ -588,11 +686,14 @@ def run_agent(
                     "observation_hash":_hash(observation),
                 })
                 tool_messages.append({"role":"tool","tool_name":tool_name,"content":json.dumps(observation,ensure_ascii=False)})
-                if completed:
+                if completed or fatal_tool_error:
                     break
             messages.extend(tool_messages)
             if completed:
                 status, stop_reason = "PASS", "ANSWER_CANDIDATE_VERIFIED"
+                break
+            if fatal_tool_error:
+                stop_reason = fatal_tool_error
                 break
             if tool_calls_used > max_tool_calls:
                 stop_reason = "TOOL_CALL_BUDGET_EXCEEDED"

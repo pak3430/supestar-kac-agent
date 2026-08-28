@@ -1,6 +1,6 @@
 # 수용 게이트와 현재 판정
 
-판정 기준일: 2026-08-27
+판정 기준일: 2026-08-28
 
 ## 구조 게이트
 
@@ -20,6 +20,7 @@
 ## 정확성 게이트
 
 - [x] 관계 주장은 실제 관찰된 edge를 가져야 한다.
+- [x] 두 anchor의 관계를 말한 claim은 전체 관찰 edge 경로를 인용해야 한다.
 - [x] 도메인 판정은 실제 `KACSkillRun`을 가져야 한다.
 - [x] claim마다 evidence와 source ref가 연결된다.
 - [x] CCM·VCM·Scope·크레딧·배출권 혼동을 차단한다.
@@ -47,6 +48,8 @@
 - source refs: `ghg-protocol-corporate-standard-faq`, `supestar-stage-v2-contract-import`
 
 재현 가능한 비밀정보 없는 증명 snapshot은 [`../proof/latest_verified_run.json`](../proof/latest_verified_run.json)에 있습니다.
+
+ESG–탄소크레딧 관계의 역방향 edge 처리, 신뢰 요청 문맥 결합, 실제 SkillRun과 전체 경로 인용까지 검증한 최신 회귀 증거는 [`../proof/validation_esg_carbon_credit_handler_fix_live_run.json`](../proof/validation_esg_carbon_credit_handler_fix_live_run.json)에 있습니다.
 
 ## 아직 주장하지 않는 것
 

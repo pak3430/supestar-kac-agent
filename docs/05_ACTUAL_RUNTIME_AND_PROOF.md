@@ -9,10 +9,12 @@ Ollama의 `qwen2.5:14b-instruct-q4_K_M`이 다음 행동을 선택합니다.
 - 관찰할 개념
 - 확장할 관계와 목표 개념
 - 실행할 KAC 원자 스킬
-- 스킬 입력
+- 스킬의 도메인 입력
 - 답변 후보와 evidence ID
 
 연결 주소는 `http://127.0.0.1:11434`만 허용됩니다. 비-loopback endpoint는 코드가 거부합니다.
+
+원 질문·사용자 역할·기준일은 Qwen이 추측하거나 바꾸는 도메인 입력이 아닙니다. 서버가 요청 봉투의 신뢰 값으로 Skill 호출에 결합하고, 그 결합 사실도 event로 남깁니다.
 
 ### 2. CCS Knowledge Environment
 
@@ -38,6 +40,7 @@ Qwen의 문장이라고 바로 공개하지 않습니다.
 
 - 질문 anchor가 관찰됐는가
 - 관계 질문의 anchor 사이에 관찰 edge 경로가 있는가
+- 관계를 말한 개별 claim이 양쪽 anchor 사이의 전체 관찰 edge 경로를 인용하는가
 - 원자 스킬이 실제 실행됐는가
 - claim이 존재하는 evidence ID만 인용하는가
 - claim에 언급한 개념에 해당 evidence가 직접 닿는가
@@ -86,6 +89,28 @@ Qwen의 문장이라고 바로 공개하지 않습니다.
 - 최신 회귀 증명 snapshot: [`../proof/validation_scope1_max_steps_fix_live_run.json`](../proof/validation_scope1_max_steps_fix_live_run.json)
 - 기존 증명 snapshot: [`../proof/latest_verified_run.json`](../proof/latest_verified_run.json)
 - 브라우저 검수 기록: [`../proof/browser_verification.json`](../proof/browser_verification.json)
+
+## 실제 ESG–탄소크레딧 오류 회귀 run
+
+다음 질문에서 과거에는 `grounded ESG action path is unavailable` 예외가 화면에 노출됐습니다.
+
+> ESG 관점에서 탄소크레딧과 어떤 상관관계가 있습니까?
+
+수정 후 실제 Local Qwen run은 다음 순서로 완료됐습니다.
+
+1. `ESG`, `CARBON_CREDIT` anchor를 각각 관찰
+2. `ESG → SDGs → SDG 13 ↔ 산림탄소 프로젝트 → 탄소크레딧` 경로 관찰
+3. 역방향으로 저장된 유효 산림탄소 관계를 양방향 fallback으로 연결
+4. 모델이 빠뜨린 `userRole`, `asOfDate`를 요청 봉투의 `LEARNER`, `2026-08-28`로 결합
+5. `esg-carbon-action-path` SkillRun 1개 실제 실행, 시장판단 선행 근거 부족을 `REVIEW`로 관찰
+6. Qwen 후보가 관계 전체 경로 중 일부만 인용해 Verifier가 차단
+7. 문장·판정은 바꾸지 않고 이미 관찰된 나머지 edge만 추가한 뒤 `PASS`
+
+- 회귀 증명 snapshot: [`../proof/validation_esg_carbon_credit_handler_fix_live_run.json`](../proof/validation_esg_carbon_credit_handler_fix_live_run.json)
+- Local Qwen: `qwen2.5:14b-instruct-q4_K_M`
+- Skill: `esg-carbon-action-path`
+- 최종 상태: `PASS`
+- 인터넷 사용: `false`
 
 검증 명령:
 

@@ -181,7 +181,7 @@
         </div>
         <div class="element-list" style="margin-top:9px">
           <article class="element"><div class="e-index">13</div><div class="e-name"><small>OBSERVATION</small><strong>실행 결과를 증거로 등록</strong><code>agent_tools.py · execute()</code></div><div class="e-body"><div class="fact"><b>INPUT</b><p>각 도구의 실행 결과</p></div><div class="fact"><b>처리</b><p><code>concept:</code>, <code>edge:</code>, <code>skill:</code> evidence ID로 환경에 저장</p></div><div class="fact"><b>중복</b><p>같은 concept·relation·skill+input은 기존 Observation 또는 SkillRun 재사용</p></div><div class="fact"><b>다음</b><p>tool message로 Qwen의 다음 turn에 전달</p></div></div></article>
-          <article class="element qwen"><div class="e-index">14</div><div class="e-name"><small>LOOP</small><strong>Qwen이 현재 단계 안에서 행동 선택</strong><code>agent.py · for step in 1..10</code></div><div class="e-body"><div class="fact"><b>INPUT</b><p>질문 + action/Observation + 현재 lifecycle gate</p></div><div class="fact"><b>처리</b><p>남은 필수 anchor나 관계, 스킬 입력, 제출 claim을 모델이 선택</p></div><div class="fact"><b>종료</b><p>검증 PASS 또는 단계·도구 예산 소진</p></div><div class="fact"><b>효과</b><p>완료된 관찰로 되돌아가는 반복을 막아 단계 예산을 보존합니다.</p></div></div></article>
+          <article class="element qwen"><div class="e-index">14</div><div class="e-name"><small>LOOP</small><strong>Qwen이 현재 단계 안에서 행동 선택</strong><code>agent.py · for step in 1..10</code></div><div class="e-body"><div class="fact"><b>INPUT</b><p>질문 + action/Observation + 현재 lifecycle gate</p></div><div class="fact"><b>처리</b><p>남은 anchor·관계·Skill·도메인 입력·claim은 모델이 선택</p></div><div class="fact"><b>신뢰 문맥</b><p>원 질문·역할·기준일은 서버 요청값을 Skill에 결합</p></div><div class="fact"><b>종료</b><p>검증 PASS 또는 단계·도구 예산 소진</p></div></div></article>
         </div>
       </div>
     </details>
@@ -205,12 +205,12 @@
         </div>
         <div class="checks">
           <div class="check"><b>1.</b> answer와 claim 존재</div><div class="check"><b>2.</b> 한글 완전문장·중국어 문장 차단</div><div class="check"><b>3.</b> 질문 anchor 전부 관찰</div>
-          <div class="check"><b>4.</b> anchor 2개 이상이면 관찰 edge로 연결</div><div class="check"><b>5.</b> KAC Skill 최소 1회 실행</div><div class="check"><b>6.</b> evidence ID가 실제 환경에 존재</div>
+          <div class="check"><b>4.</b> 관계 claim은 anchor 사이 전체 관찰 경로 인용</div><div class="check"><b>5.</b> KAC Skill 최소 1회 실행</div><div class="check"><b>6.</b> evidence ID가 실제 환경에 존재</div>
           <div class="check"><b>7.</b> claim과 근거의 단어 겹침 18% 이상</div><div class="check"><b>8.</b> 언급한 CCS 개념마다 직접 근거 연결</div><div class="check"><b>9.</b> 출처와 실제 SkillRun 인용</div>
           <div class="check"><b>10.</b> CCM/Scope·VCM/Scope 혼동 차단</div><div class="check"><b>11.</b> 탄소크레딧=배출권 혼동 차단</div><div class="check"><b>12.</b> 검증 결과와 source ref 목록 생성</div>
         </div>
         <div class="element-list" style="margin-top:9px">
-          <article class="element verify"><div class="e-index">21</div><div class="e-name"><small>LIMITED REPAIR</small><strong>Skill ID 정규화·관찰 근거 보완</strong><code>agent.py · evidence repair</code></div><div class="e-body"><div class="fact"><b>ID 정규화</b><p>실행 ID가 정확히 일치할 때 누락된 <code>skill:</code>만 추가</p></div><div class="fact"><b>개념 보완</b><p>문장이 맞을 때 Verifier가 지정한 관찰 <code>concept:*</code>만 추가</p></div><div class="fact"><b>반복 차단</b><p>같은 인용 오류에서는 스킬 재실행 없이 재제출만 허용</p></div><div class="fact"><b>금지</b><p>문장·판정·미관찰 지식은 자동 수정하지 않음</p></div></div></article>
+          <article class="element verify"><div class="e-index">21</div><div class="e-name"><small>LIMITED REPAIR</small><strong>Skill ID 정규화·관찰 근거 보완</strong><code>agent.py · evidence repair</code></div><div class="e-body"><div class="fact"><b>ID 정규화</b><p>실행 ID가 정확히 일치할 때 누락된 <code>skill:</code>만 추가</p></div><div class="fact"><b>관찰 근거</b><p>Verifier가 지정한 개념·전체 관계 경로·SkillRun ID만 추가</p></div><div class="fact"><b>반복 차단</b><p>같은 인용 오류에서는 스킬 재실행 없이 재제출만 허용</p></div><div class="fact"><b>금지</b><p>문장·판정·미관찰 지식은 자동 수정하지 않음</p></div></div></article>
           <article class="element store"><div class="e-index">22</div><div class="e-name"><small>FINAL PACKAGE</small><strong>답변 공개 또는 차단</strong><code>run_manifest.json</code></div><div class="e-body"><div class="fact"><b>PASS</b><p>검증된 claim text만 이어 붙인 답변 공개</p></div><div class="fact"><b>STOP</b><p><code>answer=null</code>, 실행·실패 증거는 보존</p></div><div class="fact"><b>포함</b><p>model identity, skill IDs, sources, metrics, locality flags</p></div><div class="fact"><b>주의</b><p>candidate의 자유로운 answer 초안을 그대로 내보내지 않습니다.</p></div></div></article>
           <article class="element store"><div class="e-index">23</div><div class="e-name"><small>STREAM + AUDIT</small><strong>화면 표시·영구 감사 기록</strong><code>events.json + SQLite</code></div><div class="e-body"><div class="fact"><b>STREAM</b><p>각 event를 NDJSON 한 줄로 즉시 브라우저에 전달</p></div><div class="fact"><b>화면</b><p>오른쪽 trace에 행동·Observation·검증 표시</p></div><div class="fact"><b>파일</b><p>request, model, events, SkillRuns, manifest</p></div><div class="fact"><b>SQLite</b><p>지식 검색이 아닌 agent_run·agent_event 감사 저장</p></div></div></article>
         </div>
@@ -229,6 +229,7 @@
       <div class="boundary-grid">
         <article class="boundary"><strong>왜 아직 수 분 걸리나요?</strong><p>그래프와 Python 스킬보다 14B Local Qwen 추론이 지연의 대부분입니다. 이 run은 행동 5단계에서 본 호출 5회와 자연어 이탈 복구 4회, 총 9회 실행됐습니다.</p></article>
         <article class="boundary"><strong>왜 첫 REVIEW도 남기나요?</strong><p>정답 문장만 보여주지 않고 근거 인용 누락을 Verifier가 차단하고, 허용된 관찰 근거만 보완한 사실까지 실행 증거로 남기기 때문입니다.</p></article>
+        <article class="boundary"><strong>ESG–탄소크레딧 오류는 해결됐나요?</strong><p>동일 질문에서 역방향 산림탄소 edge를 정상 연결하고, 신뢰 요청 문맥으로 SkillRun 1개를 실행한 뒤 전체 관계 경로 인용을 검사해 <code>PASS</code>했습니다.</p></article>
       </div>
     </section>
 

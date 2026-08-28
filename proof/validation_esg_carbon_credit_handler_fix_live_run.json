@@ -1,0 +1,98 @@
+{
+  "answer": "ESG 관점에서 탄소크레딧과의 상관관계는 환경 축을 통해 연결됩니다. 산림탄소 프로젝트가 기후변화와 같은 중요한 환경 문제에 기여할 수 있지만, 실제 기여를 확인하기 위해서는 추가 증거가 필요합니다.",
+  "event_count": 26,
+  "internet_used": false,
+  "llm_called": true,
+  "local_llm_verified": true,
+  "model_identity": {
+    "capabilities": [
+      "completion",
+      "tools"
+    ],
+    "endpoint": "http://127.0.0.1:11434",
+    "endpoint_scope": "LOOPBACK_ONLY",
+    "family": "qwen2",
+    "model": "qwen2.5:14b-instruct-q4_K_M",
+    "model_digest": "7cdf5a0187d5c58cc5d369b255592f7841d1c4696d45a8c8a9489440385b22f6",
+    "ollama_version": "0.32.1",
+    "parameter_size": "14.8B",
+    "provider": "OLLAMA_LOCAL",
+    "quantization_level": "Q4_K_M"
+  },
+  "note": "This is a non-secret evidence snapshot. Full transient runs and SQLite state remain gitignored.",
+  "object_type": "VerifiedRunProofSnapshot",
+  "observed_evidence_ids": [
+    "concept:CARBON_CREDIT",
+    "concept:ESG",
+    "edge:esg:environment",
+    "edge:esg:governance",
+    "edge:esg:management",
+    "edge:esg:sdgs",
+    "edge:esg:social",
+    "edge:forest:credit",
+    "edge:forest:sdg13",
+    "edge:sdgs:13",
+    "skill:esg-carbon-action-path:latest",
+    "skill:skill-run-56a0e26b-6f54-4532-ae35-13a9091d4a14"
+  ],
+  "question": "ESG 관점에서 탄소크레딧과 어떤 상관관계가 있습니까?",
+  "question_specific_route_map_used": false,
+  "run_id": "agent-run-b95a3acc-a94c-4948-905e-010da8d9ddf0",
+  "skill_run_ids": [
+    "skill-run-56a0e26b-6f54-4532-ae35-13a9091d4a14"
+  ],
+  "skills_invoked": [
+    "esg-carbon-action-path"
+  ],
+  "source_run_manifest_sha256": "853aaab67866b676a6e5a74c896e71717ca00b3b632b8ee2c25cebde07a04ecd",
+  "stop_reason": "ANSWER_CANDIDATE_VERIFIED",
+  "verification": {
+    "anchor_ids": [
+      "CARBON_CREDIT",
+      "ESG"
+    ],
+    "cited_evidence_ids": [
+      "edge:esg:environment",
+      "edge:esg:sdgs",
+      "edge:forest:credit",
+      "edge:forest:sdg13",
+      "edge:sdgs:13",
+      "skill:esg-carbon-action-path:latest"
+    ],
+    "cited_skill_run_ids": [
+      "skill-run-56a0e26b-6f54-4532-ae35-13a9091d4a14"
+    ],
+    "executed_skill_names": [
+      "esg-carbon-action-path"
+    ],
+    "forbidden_confusions": [],
+    "missing_requirements": [],
+    "observed_concept_ids": [
+      "CARBON_CREDIT",
+      "ESG"
+    ],
+    "observed_edge_ids": [
+      "edge:esg:environment",
+      "edge:esg:governance",
+      "edge:esg:management",
+      "edge:esg:sdgs",
+      "edge:esg:social",
+      "edge:forest:credit",
+      "edge:forest:sdg13",
+      "edge:sdgs:13"
+    ],
+    "repair_evidence_by_concept": {},
+    "repair_relation_evidence_by_claim": {},
+    "source_refs": [
+      "ghg-protocol-corporate-standard-faq",
+      "kofpi-forest-carbon-offset-program",
+      "supestar-stage-v1-derived-skill-contracts",
+      "supestar-stage-v2-contract-import",
+      "un-sustainable-development-goals"
+    ],
+    "uncovered_claim_concepts": {},
+    "unsupported_evidence_ids": [],
+    "verdict": "PASS",
+    "verified_answer": "ESG 관점에서 탄소크레딧과의 상관관계는 환경 축을 통해 연결됩니다. 산림탄소 프로젝트가 기후변화와 같은 중요한 환경 문제에 기여할 수 있지만, 실제 기여를 확인하기 위해서는 추가 증거가 필요합니다."
+  }
+}

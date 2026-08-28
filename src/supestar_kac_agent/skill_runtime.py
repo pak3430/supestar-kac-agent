@@ -45,7 +45,16 @@ def execute_skill(
     handler = HANDLERS.get(chain["handler"])
     if not handler:
         return {"status":"STOP","error":"HANDLER_NOT_INSTALLED","skill_name":skill_name}
-    result = handler(dict(inputs), KnowledgeGraph(root))
+    try:
+        result = handler(dict(inputs), KnowledgeGraph(root))
+    except Exception as error:
+        return {
+            "status":"STOP",
+            "error":"SKILL_HANDLER_RUNTIME_ERROR",
+            "skill_name":skill_name,
+            "error_type":type(error).__name__,
+            "error_message":str(error)[:500],
+        }
     required_output = chain["runtime"]["output_contract"].get("required", [])
     result["evidence_refs"] = chain["source_refs"]
     absent = [field for field in required_output if field not in result]

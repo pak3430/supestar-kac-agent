@@ -4,8 +4,10 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from supestar_kac_agent.agent import (
+    _bind_trusted_skill_context,
     _lifecycle_gate,
     _normalize_executed_skill_evidence_ids,
     _repair_observed_concept_citations,
@@ -229,6 +231,149 @@ class GateViolationQwen:
         }
 
 class KACRuntimeTests(unittest.TestCase):
+    def test_trusted_request_context_overrides_missing_or_model_guessed_skill_values(self) -> None:
+        environment = ToolEnvironment(root=ROOT, run_dir=ROOT / "runs" / "unit-test-unused")
+        bound, changes = _bind_trusted_skill_context(
+            {
+                "skill_name":"esg-carbon-action-path",
+                "inputs":{
+                    "question":"모델이 바꾼 질문",
+                    "userRole":"REVIEWER",
+                    "asOfDate":None,
+                    "focus":"FOREST_CARBON",
+                },
+            },
+            question="ESG 관점에서 탄소크레딧과 어떤 상관관계가 있습니까?",
+            role="LEARNER",
+            as_of_date="2026-08-28",
+            catalog_by_name=environment.catalog_by_name,
+        )
+        self.assertEqual(bound["inputs"], {
+            "question":"ESG 관점에서 탄소크레딧과 어떤 상관관계가 있습니까?",
+            "userRole":"LEARNER",
+            "asOfDate":"2026-08-28",
+            "focus":"FOREST_CARBON",
+        })
+        self.assertEqual({item["field"] for item in changes}, {"question", "userRole", "asOfDate"})
+
+    def test_relation_claim_requires_and_repairs_full_observed_anchor_path(self) -> None:
+        graph = KnowledgeGraph(ROOT)
+        anchors = ["ESG", "CARBON_CREDIT"]
+        with tempfile.TemporaryDirectory() as directory:
+            environment = ToolEnvironment(root=ROOT, run_dir=Path(directory))
+            for concept in anchors:
+                environment.execute("observe_concept", {"concept":concept})
+            environment.execute("expand_relations", {
+                "concept":"ESG",
+                "toward_concept":"CARBON_CREDIT",
+                "purpose":"관계 관찰",
+            })
+            environment.execute("invoke_kac_skill", {
+                "skill_name":"esg-carbon-action-path",
+                "inputs":{
+                    "question":"ESG 관점에서 탄소크레딧과 어떤 상관관계가 있습니까?",
+                    "userRole":"LEARNER",
+                    "asOfDate":"2026-08-28",
+                    "focus":"FOREST_CARBON",
+                    "measurementEvidence":[],
+                },
+            })
+            candidate = {
+                "answer":"ESG와 탄소크레딧은 기후행동과 산림탄소를 통해 연결됩니다.",
+                "claims":[{
+                    "text":"ESG와 탄소크레딧은 기후행동과 산림탄소를 통해 연결됩니다.",
+                    "evidence_ids":[
+                        "edge:esg:environment",
+                        "skill:esg-carbon-action-path:latest",
+                    ],
+                }],
+            }
+            verification = verify_candidate(
+                candidate,
+                anchors=anchors,
+                evidence=environment.evidence,
+                skill_runs=environment.skill_runs,
+                graph=graph,
+            )
+            self.assertIn("claim_relation_path:0", verification["missing_requirements"])
+            self.assertEqual(verification["repair_relation_evidence_by_claim"]["0"], [
+                "edge:esg:sdgs",
+                "edge:sdgs:13",
+                "edge:forest:sdg13",
+                "edge:forest:credit",
+            ])
+            repaired = _repair_observed_concept_citations(candidate, verification)
+            self.assertIsNotNone(repaired)
+            repaired_verification = verify_candidate(
+                repaired,
+                anchors=anchors,
+                evidence=environment.evidence,
+                skill_runs=environment.skill_runs,
+                graph=graph,
+            )
+            self.assertEqual(repaired_verification["verdict"], "PASS")
+
+    def test_observed_skill_citation_can_repair_matching_uncovered_concept(self) -> None:
+        candidate = {
+            "answer":"산림탄소는 SDG 13과 연결됩니다.",
+            "claims":[{
+                "text":"산림탄소 프로젝트는 SDG 13과 연결됩니다.",
+                "evidence_ids":["edge:forest:sdg13"],
+            }],
+        }
+        repaired = _repair_observed_concept_citations(candidate, {
+            "missing_requirements":[
+                "cited_executed_skill_output",
+                "claim_uncovered_concept:0:SDGS",
+            ],
+            "unsupported_evidence_ids":[],
+            "forbidden_confusions":[],
+            "repair_evidence_by_concept":{
+                "SDGS":[
+                    "edge:sdgs:13",
+                    "skill:esg-carbon-action-path:latest",
+                    "skill:skill-run-exact",
+                ],
+            },
+        })
+        self.assertIsNotNone(repaired)
+        self.assertEqual(repaired["claims"][0]["evidence_ids"], [
+            "edge:forest:sdg13",
+            "skill:esg-carbon-action-path:latest",
+        ])
+
+    def test_forest_carbon_focus_uses_grounded_bidirectional_relation_fallback(self) -> None:
+        result = execute_skill("esg-carbon-action-path", {
+            "question":"ESG와 산림탄소의 관계를 알려주세요.",
+            "userRole":"LEARNER",
+            "asOfDate":"2026-08-28",
+            "focus":"FOREST_CARBON",
+            "measurementEvidence":["측정 근거 확인"],
+        }, root=ROOT)
+        self.assertEqual(result["status"], "EXECUTED")
+        output = result["skill_run"]["output"]
+        self.assertEqual(output["verdict"], "PROCEED")
+        self.assertEqual(output["ordered_nodes"][0], "ESG")
+        self.assertEqual(output["ordered_nodes"][-1], "FOREST_CARBON_PROJECT")
+        self.assertIn("BIDIRECTIONAL_GROUNDED_RELATION_FALLBACK", output["rule_trace"])
+
+    def test_skill_handler_exception_is_contained_as_stop_observation(self) -> None:
+        def broken_handler(payload: dict, graph: KnowledgeGraph) -> dict:
+            raise RuntimeError("simulated handler failure")
+
+        with patch.dict(
+            "supestar_kac_agent.skill_runtime.HANDLERS",
+            {"esg_carbon_action_path_v1":broken_handler},
+        ):
+            result = execute_skill("esg-carbon-action-path", {
+                "question":"ESG란 무엇인가요?",
+                "userRole":"LEARNER",
+                "asOfDate":"2026-08-28",
+            }, root=ROOT)
+        self.assertEqual(result["status"], "STOP")
+        self.assertEqual(result["error"], "SKILL_HANDLER_RUNTIME_ERROR")
+        self.assertEqual(result["error_type"], "RuntimeError")
+
     def test_tool_outside_current_lifecycle_gate_is_not_executed(self) -> None:
         request = {
             "question":"이 배출원은 Scope 몇인가요?",
@@ -375,10 +520,12 @@ class KACRuntimeTests(unittest.TestCase):
             candidate = {
                 "answer":"Scope 1입니다.",
                 "claims":[{
-                    "text":"배출원이 우리 회사의 소유와 통제하에 있으며 직접 연소한 도시가스이므로 Scope 1으로 분류됩니다.",
+                    "text":"제시된 활동자료에서 배출원이 우리 회사의 소유와 통제하에 있으며 직접 연소한 도시가스이므로 Scope 1으로 분류됩니다.",
                     "evidence_ids":[
                         "skill:scope-activity-classification:latest",
                         "concept:OPERATIONAL_BOUNDARY",
+                        "concept:ACTIVITY_DATA",
+                        "edge:scopes:activity",
                     ],
                 }],
             }
@@ -390,6 +537,43 @@ class KACRuntimeTests(unittest.TestCase):
                 graph=graph,
             )
             self.assertEqual(verification["verdict"], "PASS")
+
+    def test_verifier_requires_every_question_anchor_to_appear_in_claims(self) -> None:
+        graph = KnowledgeGraph(ROOT)
+        anchors = ["CARBON_CREDIT", "ESG"]
+        with tempfile.TemporaryDirectory() as directory:
+            environment = ToolEnvironment(root=ROOT, run_dir=Path(directory))
+            for concept in anchors:
+                environment.execute("observe_concept", {"concept":concept})
+            environment.execute("expand_relations", {
+                "concept":"ESG",
+                "toward_concept":"CARBON_CREDIT",
+                "purpose":"관계 관찰",
+            })
+            environment.execute("invoke_kac_skill", {
+                "skill_name":"carbon-market-unit-comparison",
+                "inputs":{
+                    "question":"ESG와 탄소크레딧의 관계",
+                    "purpose":"LEARNING",
+                    "asOfDate":"2026-08-28",
+                },
+            })
+            candidate = {
+                "answer":"ESG 설명만 포함합니다.",
+                "claims":[{
+                    "text":"ESG는 조직 책임을 운영에 반영하는 관점입니다.",
+                    "evidence_ids":["concept:ESG", "skill:carbon-market-unit-comparison:latest"],
+                }],
+            }
+            verification = verify_candidate(
+                candidate,
+                anchors=anchors,
+                evidence=environment.evidence,
+                skill_runs=environment.skill_runs,
+                graph=graph,
+            )
+            self.assertEqual(verification["verdict"], "REVIEW")
+            self.assertIn("anchor_claim_coverage:CARBON_CREDIT", verification["missing_requirements"])
 
     def test_missing_skill_namespace_is_normalized_only_for_exact_observed_run(self) -> None:
         evidence = {

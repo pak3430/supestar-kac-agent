@@ -11,7 +11,7 @@ _KOREAN_SUFFIXES = (
     "하였습니다", "했습니다", "분류됩니다", "해당합니다", "아닙니다",
     "합니다", "됩니다", "입니다", "하면서", "하는", "하고", "하며", "하에",
     "에서", "에게", "부터", "까지", "보다", "처럼", "으로",
-    "은", "는", "이", "가", "을", "를", "의", "에", "도", "만", "와", "과", "로", "한",
+    "은", "는", "이", "가", "을", "를", "의", "에", "도", "만", "와", "과", "로", "한", "할",
 )
 
 
@@ -59,6 +59,18 @@ def _evidence_text(item: dict[str, Any], graph: KnowledgeGraph) -> str:
     return " ".join(parts)
 
 
+def _token_matches(claim_token: str, ground_token: str) -> bool:
+    if claim_token == ground_token:
+        return True
+    if (
+        re.fullmatch(r"[가-힣]+", claim_token)
+        and re.fullmatch(r"[가-힣]+", ground_token)
+        and min(len(claim_token), len(ground_token)) >= 2
+    ):
+        return claim_token in ground_token or ground_token in claim_token
+    return False
+
+
 def _claim_has_grounding_overlap(claim: dict[str, Any], evidence: dict[str, dict[str, Any]], graph: KnowledgeGraph) -> bool:
     claim_tokens = _tokens(str(claim.get("text", "")))
     if not claim_tokens:
@@ -68,7 +80,12 @@ def _claim_has_grounding_overlap(claim: dict[str, Any], evidence: dict[str, dict
         item = evidence.get(str(evidence_id))
         if item:
             ground_tokens.update(_tokens(_evidence_text(item, graph)))
-    return bool(ground_tokens) and len(claim_tokens & ground_tokens) / len(claim_tokens) >= 0.18
+    matched_claim_tokens = {
+        claim_token
+        for claim_token in claim_tokens
+        if any(_token_matches(claim_token, ground_token) for ground_token in ground_tokens)
+    }
+    return bool(ground_tokens) and len(matched_claim_tokens) / len(claim_tokens) >= 0.18
 
 
 def _evidence_covers_concept(evidence_id: str, concept_id: str, evidence: dict[str, dict[str, Any]]) -> bool:
@@ -88,29 +105,51 @@ def _evidence_covers_concept(evidence_id: str, concept_id: str, evidence: dict[s
     return False
 
 
-def anchors_connected(anchors: list[str], observed_edges: set[str], graph: KnowledgeGraph) -> bool:
+def observed_path_edge_ids(
+    anchors: list[str],
+    observed_edges: set[str],
+    graph: KnowledgeGraph,
+) -> list[str]:
     if len(anchors) < 2:
-        return True
+        return []
     adjacency: dict[str, set[str]] = {}
+    edge_by_pair: dict[frozenset[str], str] = {}
     for edge_id in observed_edges:
         edge = graph.edges.get(edge_id)
         if not edge:
             continue
         adjacency.setdefault(edge["from"], set()).add(edge["to"])
         adjacency.setdefault(edge["to"], set()).add(edge["from"])
-    start, targets = anchors[0], set(anchors[1:])
-    queue, visited = deque([start]), {start}
-    while queue:
-        current = queue.popleft()
-        for neighbor in adjacency.get(current, set()):
-            if neighbor in targets:
-                targets.remove(neighbor)
-                if not targets:
-                    return True
-            if neighbor not in visited:
-                visited.add(neighbor)
-                queue.append(neighbor)
-    return not targets
+        edge_by_pair[frozenset((edge["from"], edge["to"]))] = edge_id
+    start = anchors[0]
+    combined: list[str] = []
+    for target in anchors[1:]:
+        queue = deque([start])
+        previous: dict[str, str | None] = {start:None}
+        while queue and target not in previous:
+            current = queue.popleft()
+            for neighbor in sorted(adjacency.get(current, set())):
+                if neighbor not in previous:
+                    previous[neighbor] = current
+                    queue.append(neighbor)
+        if target not in previous:
+            return []
+        nodes = [target]
+        while nodes[-1] != start:
+            parent = previous[nodes[-1]]
+            if parent is None:
+                return []
+            nodes.append(parent)
+        nodes.reverse()
+        for left, right in zip(nodes, nodes[1:]):
+            edge_id = edge_by_pair[frozenset((left, right))]
+            if edge_id not in combined:
+                combined.append(edge_id)
+    return combined
+
+
+def anchors_connected(anchors: list[str], observed_edges: set[str], graph: KnowledgeGraph) -> bool:
+    return len(anchors) < 2 or bool(observed_path_edge_ids(anchors, observed_edges, graph))
 
 
 def verify_candidate(
@@ -140,7 +179,9 @@ def verify_candidate(
     if not skill_runs:
         missing.append("executed_kac_skill")
     cited: set[str] = set()
+    claimed_concepts: set[str] = set()
     uncovered_claim_concepts: dict[str, list[str]] = {}
+    repair_relation_evidence_by_claim: dict[str, list[str]] = {}
     for index, claim in enumerate(claims):
         if not isinstance(claim, dict) or not str(claim.get("text", "")).strip():
             missing.append(f"claim_text:{index}")
@@ -159,6 +200,15 @@ def verify_candidate(
         if ids and not _claim_has_grounding_overlap(claim, evidence, graph):
             missing.append(f"claim_grounding_overlap:{index}")
         mentioned_concepts = graph.anchor_ids(claim_text)
+        claimed_concepts.update(mentioned_concepts)
+        mentioned_question_anchors = [anchor for anchor in anchors if anchor in mentioned_concepts]
+        if len(mentioned_question_anchors) >= 2:
+            cited_edges = {str(evidence_id) for evidence_id in ids if str(evidence_id).startswith("edge:")}
+            if not anchors_connected(mentioned_question_anchors, cited_edges, graph):
+                missing.append(f"claim_relation_path:{index}")
+                repair_path = observed_path_edge_ids(mentioned_question_anchors, observed_edges, graph)
+                if repair_path:
+                    repair_relation_evidence_by_claim[str(index)] = repair_path
         uncovered = [
             concept_id
             for concept_id in mentioned_concepts
@@ -167,6 +217,9 @@ def verify_candidate(
         if uncovered:
             uncovered_claim_concepts[str(index)] = uncovered
             missing.extend(f"claim_uncovered_concept:{index}:{concept_id}" for concept_id in uncovered)
+    for anchor in anchors:
+        if anchor not in claimed_concepts:
+            missing.append(f"anchor_claim_coverage:{anchor}")
     lowered = answer.casefold().replace(" ", "")
     forbidden = []
     if "ccm은직접배출" in lowered or "ccm은scope1" in lowered:
@@ -208,6 +261,7 @@ def verify_candidate(
         "forbidden_confusions": forbidden,
         "uncovered_claim_concepts": uncovered_claim_concepts,
         "repair_evidence_by_concept": repair_evidence_by_concept,
+        "repair_relation_evidence_by_claim": repair_relation_evidence_by_claim,
         "anchor_ids": anchors,
         "observed_concept_ids": sorted(observed_concepts),
         "observed_edge_ids": sorted(observed_edges),

@@ -52,10 +52,19 @@ def esg_carbon_action_path(payload: dict[str, Any], graph: KnowledgeGraph) -> Sk
         missing.extend(["organization_boundary", "activity_data", "direct_reduction_and_residual_evidence"])
     else:
         verdict, trace = "PROCEED", ["DIRECTED_GROUNDED_PATH_SELECTED"]
-    path = graph.shortest_path("ESG", allowed_focus.get(focus, "CO2E"))
+    target_concept = allowed_focus.get(focus, "CO2E")
+    path = graph.shortest_path("ESG", target_concept)
     if path.get("status") != "PATH_FOUND":
-        raise RuntimeError("grounded ESG action path is unavailable")
-    if verdict == "STOP":
+        path = graph.shortest_path("ESG", target_concept, bidirectional=True)
+        if path.get("status") == "PATH_FOUND":
+            trace.append("BIDIRECTIONAL_GROUNDED_RELATION_FALLBACK")
+    if path.get("status") != "PATH_FOUND":
+        verdict = "STOP"
+        trace.append("GROUNDED_ESG_ACTION_PATH_UNAVAILABLE")
+        missing.append(f"grounded_path:ESG:{target_concept}")
+    if "GROUNDED_ESG_ACTION_PATH_UNAVAILABLE" in trace:
+        answer = "현재 승인된 CCS 관계 안에서는 요청한 종료점까지의 연속 경로를 확인할 수 없어 답변을 중단합니다."
+    elif verdict == "STOP":
         answer = "설명과 준비 경로는 만들 수 있지만 실제 거래·결제·등록부 변경이나 근거 없는 탄소중립 확정은 실행하지 않습니다."
     elif verdict == "REVIEW":
         answer = "요청한 연결을 검토하려면 비어 있는 조직 경계·측정·직접감축·잔여배출 근거를 먼저 확인해야 합니다."
@@ -64,8 +73,8 @@ def esg_carbon_action_path(payload: dict[str, Any], graph: KnowledgeGraph) -> Sk
     return {
         "verdict": verdict,
         "answer": answer,
-        "ordered_nodes": path["node_ids"],
-        "reason_per_edge": [{"edge_id": edge["id"], "reason": edge["reason"]} for edge in path["edges"]],
+        "ordered_nodes": path.get("node_ids", []),
+        "reason_per_edge": [{"edge_id": edge["id"], "reason": edge["reason"]} for edge in path.get("edges", [])],
         "next_action": {"missing_evidence": sorted(set(missing)), "human_review_required": True},
         "missing_evidence": sorted(set(missing)),
         "rule_trace": trace,
