@@ -84,7 +84,7 @@ class SupestarHandler(BaseHTTPRequestHandler):
     def do_HEAD(self) -> None:
         path = unquote(urlparse(self.path).path)
         relative = "index.html" if path in {"", "/"} else path.lstrip("/")
-        allowed = {"index.html", "runtime-visual.html", "assets/style.css", "assets/app.js"}
+        allowed = {"index.html", "runtime-visual.html", "runtime-deep-dive.html", "assets/style.css", "assets/app.js"}
         target = self.server.root / "web" / relative
         if relative not in allowed or not target.is_file():
             self.send_response(404)
@@ -175,7 +175,7 @@ class SupestarHandler(BaseHTTPRequestHandler):
 
     def _serve_static(self, request_path: str) -> None:
         relative = "index.html" if request_path in {"", "/"} else request_path.lstrip("/")
-        allowed = {"index.html", "runtime-visual.html", "assets/style.css", "assets/app.js"}
+        allowed = {"index.html", "runtime-visual.html", "runtime-deep-dive.html", "assets/style.css", "assets/app.js"}
         if relative not in allowed:
             self._send_json(404, {"error":"NOT_FOUND"})
             return

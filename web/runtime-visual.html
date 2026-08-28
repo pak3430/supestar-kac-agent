@@ -124,7 +124,7 @@
   <div class="page">
     <header class="topbar">
       <a class="brand" href="/"><span class="brand-mark">⌁</span><span>수페스타 KAC Agent</span></a>
-      <a class="back" href="/">← 챗봇으로 돌아가기</a>
+      <div style="display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end"><a class="back" href="/runtime-deep-dive.html">요소별 상세 보기</a><a class="back" href="/">← 챗봇으로 돌아가기</a></div>
     </header>
 
     <section class="hero">
@@ -184,9 +184,9 @@
       </div>
       <div class="loop"><b>↺</b> 근거가 부족하면 답을 꾸미지 않고 다시 관찰하거나 스킬을 실행합니다.</div>
       <div class="decision">
-        <div class="pass"><strong>PASS</strong>검증된 claim만 조립해 사용자에게 공개</div>
-        <div class="review"><strong>REVIEW</strong>누락된 근거를 관찰하거나 보완 질문 생성</div>
-        <div class="stop"><strong>STOP</strong>근거 없는 주장·실제 거래·잘못된 전제를 차단</div>
+        <div class="pass"><strong>KAC Skill 판정</strong>PROCEED · REVIEW · STOP</div>
+        <div class="review"><strong>Verifier 판정</strong>PASS · REVIEW</div>
+        <div class="stop"><strong>Agent 최종 상태</strong>PASS(답변 공개) · STOP(답변 없음)</div>
       </div>
     </section>
 

@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="수페스타 KAC Agent의 요소별 실제 내부 작동 상세도">
+  <title>수페스타 내부 작동 상세도</title>
+  <style>
+    :root {
+      --ink:#17241d; --muted:#637168; --forest:#1e5b3d; --dark:#123b29;
+      --lime:#d3ec76; --paper:#fbfdfa; --white:#fff; --line:#d6e2d8;
+      --mint:#e9f4eb; --qwen:#eef3ff; --skill:#fbfde8; --verify:#edf7fb;
+      --store:#f4f2f8; --warn:#fff3d9; --stop:#fae8e7;
+      --shadow:0 18px 48px rgba(30,70,46,.09);
+    }
+    * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body {
+      margin:0; color:var(--ink);
+      background:radial-gradient(circle at 8% 3%,rgba(211,236,118,.22),transparent 26rem),linear-gradient(180deg,#f8fbf7,#edf4ee);
+      font-family:Pretendard,"Noto Sans KR",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    }
+    a { color:inherit; }
+    code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.94em; }
+    .page { width:min(1280px,calc(100% - 34px)); margin:0 auto; padding:26px 0 56px; }
+    .topbar { display:flex; justify-content:space-between; align-items:center; gap:14px; }
+    .brand { display:flex; align-items:center; gap:10px; font-weight:900; text-decoration:none; }
+    .brand-mark { width:38px; height:38px; display:grid; place-items:center; border-radius:13px; color:var(--lime); background:var(--dark); font-size:23px; }
+    .top-links { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:7px; }
+    .top-links a { padding:8px 11px; border:1px solid var(--line); border-radius:10px; background:rgba(255,255,255,.8); color:var(--forest); text-decoration:none; font-size:11px; font-weight:800; }
+
+    .hero { padding:58px 0 30px; max-width:980px; }
+    .eyebrow { margin:0; color:var(--forest); font-size:10px; font-weight:900; letter-spacing:.14em; }
+    h1 { margin:12px 0 17px; font-size:clamp(38px,5.4vw,68px); line-height:1.06; letter-spacing:-.055em; }
+    .hero-copy { max-width:900px; margin:0; color:var(--muted); font-size:16px; line-height:1.75; word-break:keep-all; }
+    .legend { display:flex; flex-wrap:wrap; gap:7px; margin-top:20px; }
+    .legend span { padding:7px 10px; border:1px solid var(--line); border-radius:999px; font-size:9px; font-weight:900; }
+    .l-system{background:var(--paper)} .l-qwen{background:var(--qwen)} .l-skill{background:var(--skill)} .l-verify{background:var(--verify)} .l-store{background:var(--store)}
+    .jump { display:flex; flex-wrap:wrap; gap:7px; margin-top:18px; }
+    .jump a { padding:7px 10px; border-radius:8px; color:var(--forest); background:var(--mint); text-decoration:none; font-size:10px; font-weight:800; }
+
+    .card { border:1px solid rgba(191,208,195,.9); border-radius:23px; background:rgba(255,255,255,.91); box-shadow:var(--shadow); }
+    .verdict-card { padding:23px; }
+    .section-title { margin:0; font-size:22px; letter-spacing:-.035em; }
+    .section-copy { margin:6px 0 0; color:var(--muted); font-size:11px; line-height:1.55; }
+    .verdict-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:17px; }
+    .verdict { padding:16px; border-radius:15px; }
+    .verdict:nth-child(1){background:var(--skill)} .verdict:nth-child(2){background:var(--verify)} .verdict:nth-child(3){background:var(--store)}
+    .verdict small { color:var(--forest); font-size:9px; font-weight:900; letter-spacing:.08em; }
+    .verdict h3 { margin:7px 0 5px; font-size:14px; }
+    .verdict p { margin:0; color:var(--muted); font-size:10px; line-height:1.5; }
+    .verdict code { display:block; margin-top:10px; font-weight:850; }
+
+    .phase { margin-top:16px; overflow:hidden; }
+    .phase > summary { list-style:none; display:flex; justify-content:space-between; align-items:center; gap:15px; padding:20px 23px; cursor:pointer; }
+    .phase > summary::-webkit-details-marker { display:none; }
+    .phase > summary::after { content:"접기 −"; color:var(--forest); font-size:10px; font-weight:850; }
+    .phase:not([open]) > summary::after { content:"펼치기 +"; }
+    .phase-name { display:flex; align-items:center; gap:11px; }
+    .phase-number { min-width:34px; height:34px; display:grid; place-items:center; border-radius:11px; background:var(--dark); color:var(--lime); font-size:11px; font-weight:900; }
+    .phase h2 { margin:0; font-size:20px; letter-spacing:-.03em; }
+    .phase summary p { margin:4px 0 0; color:var(--muted); font-size:10px; }
+    .phase-body { padding:0 23px 23px; }
+    .element-list { display:grid; gap:9px; }
+    .element { position:relative; display:grid; grid-template-columns:48px minmax(155px,.55fr) minmax(0,1.45fr); border:1px solid var(--line); border-radius:16px; overflow:hidden; background:var(--paper); }
+    .element::after { content:"↓"; position:absolute; left:18px; bottom:-14px; z-index:2; color:#8da095; font-weight:900; }
+    .element:last-child::after { display:none; }
+    .e-index { display:grid; place-items:start center; padding-top:17px; background:#f0f5f1; color:var(--forest); font-size:11px; font-weight:900; }
+    .e-name { padding:16px; border-right:1px solid var(--line); }
+    .e-name small { display:block; margin-bottom:6px; color:var(--muted); font-size:8px; font-weight:900; letter-spacing:.09em; }
+    .e-name strong { display:block; font-size:13px; line-height:1.35; }
+    .e-name code { display:block; margin-top:7px; color:var(--forest); font-size:8px; overflow-wrap:anywhere; }
+    .e-body { padding:14px 16px; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; }
+    .fact { min-width:0; }
+    .fact b { display:block; margin-bottom:4px; color:var(--forest); font-size:8px; letter-spacing:.08em; }
+    .fact p { margin:0; color:var(--muted); font-size:10px; line-height:1.48; word-break:keep-all; overflow-wrap:anywhere; }
+    .element.qwen{background:var(--qwen)} .element.qwen .e-index{background:#e5ebfa}
+    .element.skill{background:var(--skill)} .element.skill .e-index{background:#f2f5cf}
+    .element.verify{background:var(--verify)} .element.verify .e-index{background:#dfeef5}
+    .element.store{background:var(--store)} .element.store .e-index{background:#ebe7f1}
+
+    .tool-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-top:11px; }
+    .tool { padding:13px; border:1px solid var(--line); border-radius:13px; background:white; }
+    .tool code { display:block; color:var(--forest); font-size:9px; font-weight:900; overflow-wrap:anywhere; }
+    .tool p { margin:6px 0 0; color:var(--muted); font-size:9px; line-height:1.45; }
+
+    .checks { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; margin-top:11px; }
+    .check { padding:10px; border-radius:11px; background:white; border:1px solid #d5e3e9; font-size:9px; line-height:1.45; }
+    .check b { color:var(--forest); }
+
+    .actual { margin-top:16px; padding:23px; }
+    .actual-head { display:flex; justify-content:space-between; gap:14px; align-items:start; }
+    .time-total { padding:10px 12px; border-radius:12px; background:var(--warn); color:#8b5b0a; font-size:11px; font-weight:900; white-space:nowrap; }
+    .trace { margin-top:18px; display:grid; gap:8px; }
+    .trace-row { display:grid; grid-template-columns:62px 90px minmax(0,1fr) 76px; align-items:center; gap:10px; padding:11px 12px; border:1px solid var(--line); border-radius:12px; background:var(--paper); }
+    .trace-row span { color:var(--muted); font-size:9px; }
+    .trace-row b { font-size:10px; }
+    .trace-row p { margin:0; font-size:10px; line-height:1.45; }
+    .trace-row time { color:var(--forest); text-align:right; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:9px; font-weight:850; }
+    .trace-row.error { border-color:#e6c2bf; background:#fcf3f2; }
+    .trace-row.pass { border-color:#afcfb8; background:#edf8ef; }
+
+    .boundary-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:16px; }
+    .boundary { padding:15px; border-radius:14px; background:#f5f8f5; }
+    .boundary strong { display:block; font-size:12px; }
+    .boundary p { margin:5px 0 0; color:var(--muted); font-size:10px; line-height:1.5; }
+    .final-line { margin:18px 2px 0; color:var(--muted); font-size:10px; line-height:1.6; }
+
+    @media(max-width:1000px){
+      .e-body{grid-template-columns:repeat(2,1fr)} .tool-grid{grid-template-columns:repeat(2,1fr)} .checks{grid-template-columns:repeat(2,1fr)}
+    }
+    @media(max-width:720px){
+      .page{width:min(100% - 22px,1280px)} .hero{padding-top:42px}
+      .topbar{align-items:flex-start} .verdict-grid,.boundary-grid{grid-template-columns:1fr}
+      .element{grid-template-columns:38px 1fr} .e-index{grid-row:1/3} .e-name{border-right:0;border-bottom:1px solid var(--line)} .e-body{grid-column:2;grid-template-columns:1fr;padding-top:12px}
+      .tool-grid,.checks{grid-template-columns:1fr} .phase > summary{align-items:flex-start}.phase > summary::after{display:none}
+      .actual-head{display:block}.time-total{display:inline-block;margin-top:10px}.trace-row{grid-template-columns:46px 75px 1fr}.trace-row time{grid-column:3;text-align:left}
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="topbar">
+      <a class="brand" href="/"><span class="brand-mark">⌁</span><span>수페스타 KAC Agent</span></a>
+      <nav class="top-links"><a href="/runtime-visual.html">간단 구조도</a><a href="/">챗봇으로 돌아가기</a></nav>
+    </header>
+
+    <section class="hero">
+      <p class="eyebrow">ELEMENT-BY-ELEMENT RUNTIME MAP</p>
+      <h1>실제 코드가 무엇을 받고,<br>무엇을 만들고, 어디로 넘기는가</h1>
+      <p class="hero-copy">이 페이지는 개념도가 아니라 현재 서버의 실행 순서를 요소 단위로 풀어 쓴 상세도입니다. 각 요소마다 입력, 처리, 생성물, 다음 단계를 표시했으며 Local Qwen의 판단과 Python Runtime의 결정도 구분했습니다.</p>
+      <div class="legend"><span class="l-system">PYTHON / SYSTEM</span><span class="l-qwen">LOCAL QWEN</span><span class="l-skill">KAC SKILL</span><span class="l-verify">VERIFIER</span><span class="l-store">AUDIT STORAGE</span></div>
+      <nav class="jump"><a href="#verdicts">세 판정 구분</a><a href="#phase-a">요청·초기화</a><a href="#phase-b">Agent 문맥</a><a href="#phase-c">행동 Loop</a><a href="#phase-d">스킬 내부</a><a href="#phase-e">검증·공개</a><a href="#actual-run">실제 23개 이벤트</a></nav>
+    </section>
+
+    <section id="verdicts" class="card verdict-card">
+      <h2 class="section-title">먼저, 이름이 비슷한 세 판정을 분리해야 합니다</h2>
+      <p class="section-copy">이 세 가지를 하나로 보면 내부 작동을 잘못 이해하게 됩니다.</p>
+      <div class="verdict-grid">
+        <article class="verdict"><small>DOMAIN DECISION</small><h3>① KAC Skill 판정</h3><p>업무 규칙상 진행·보완·차단 중 무엇인지 판단합니다.</p><code>PROCEED / REVIEW / STOP</code></article>
+        <article class="verdict"><small>EVIDENCE DECISION</small><h3>② Verifier 판정</h3><p>Qwen의 claim에 실제 관찰 근거가 모두 연결됐는지 판단합니다.</p><code>PASS / REVIEW</code></article>
+        <article class="verdict"><small>RUN RESULT</small><h3>③ Agent 최종 상태</h3><p>검증 답변을 공개했는지, 답변 없이 실행을 끝냈는지 표시합니다.</p><code>PASS / STOP</code></article>
+      </div>
+    </section>
+
+    <details id="phase-a" class="card phase" open>
+      <summary><div class="phase-name"><span class="phase-number">A</span><div><h2>요청 수신과 실행 환경 초기화</h2><p>브라우저 질문이 독립된 Agent run으로 바뀌는 구간</p></div></div></summary>
+      <div class="phase-body"><div class="element-list">
+        <article class="element"><div class="e-index">01</div><div class="e-name"><small>FRONTEND</small><strong>질문 입력</strong><code>web/assets/app.js · runQuestion()</code></div><div class="e-body"><div class="fact"><b>INPUT</b><p>사용자가 입력한 질문</p></div><div class="fact"><b>처리</b><p>질문·역할·오늘 날짜를 JSON으로 만듭니다.</p></div><div class="fact"><b>OUTPUT</b><p><code>{question,userRole,asOfDate}</code></p></div><div class="fact"><b>다음</b><p><code>POST /api/chat/stream</code></p></div></div></article>
+        <article class="element"><div class="e-index">02</div><div class="e-name"><small>HTTP SERVER</small><strong>요청 검사·NDJSON 시작</strong><code>server.py · do_POST()</code></div><div class="e-body"><div class="fact"><b>INPUT</b><p>최대 65,536바이트 JSON</p></div><div class="fact"><b>처리</b><p>빈 질문을 차단하고 역할을 대문자로 정규화합니다.</p></div><div class="fact"><b>OUTPUT</b><p>표준 request 객체와 streaming 연결</p></div><div class="fact"><b>다음</b><p><code>run_agent()</code> 호출</p></div></div></article>
+        <article class="element"><div class="e-index">03</div><div class="e-name"><small>POLICY</small><strong>Agent 운영 규칙 확인</strong><code>policy.py · load_policy()</code></div><div class="e-body"><div class="fact"><b>INPUT</b><p><code>config/agent_policy.json</code></p></div><div class="fact"><b>처리</b><p>고정 route 금지, 모델 행동 선택, 도구 5종, 예산을 검증합니다.</p></div><div class="fact"><b>OUTPUT</b><p><code>max_steps=10</code>, <code>max_tool_calls=16</code></p></div><div class="fact"><b>실패</b><p>정책이 다르면 run 시작 전에 예외</p></div></div></article>
+        <article class="element store"><div class="e-index">04</div><div class="e-name"><small>AUDIT STORE</small><strong>새 run 격리</strong><code>run_store.py · AgentRunStore</code></div><div class="e-body"><div class="fact"><b>INPUT</b><p>새 UUID</p></div><div class="fact"><b>처리</b><p>새 run 폴더와 SQLite 연결을 만듭니다.</p></div><div class="fact"><b>OUTPUT</b><p><code>runs/agent-run-&lt;uuid&gt;</code></p></div><div class="fact"><b>경계</b><p>이전 질문 메시지를 가져오지 않습니다.</p></div></div></article>
+        <article class="element"><div class="e-index">05</div><div class="e-name"><small>CCS GRAPH</small><strong>지식 그래프 적재·검증</strong><code>graph.py · KnowledgeGraph</code></div><div class="e-body"><div class="fact"><b>INPUT</b><p><code>knowledge/graph.json</code>과 source registry</p></div><div class="fact"><b>처리</b><p>29 node·31 edge, alias 충돌, 출처 상태, 활성 스킬을 검사합니다.</p></div><div class="fact"><b>OUTPUT</b><p>node/edge/alias index와 graph fingerprint</p></div><div class="fact"><b>경계</b><p>문서 벡터 검색 DB가 아닙니다.</p></div></div></article>
+        <article class="element skill"><div class="e-index">06</div><div class="e-name"><small>KAC COMPILER</small><strong>원자 스킬 계약 컴파일</strong><code>skill_compiler.py · compile_skills()</code></div><div class="e-body"><div class="fact"><b>INPUT</b><p>6개 atomic skill 폴더와 import manifest</p></div><div class="fact"><b>처리</b><p>7-node 순서·derived_from·SHA-256·handler·출처를 검사합니다.</p></div><div class="fact"><b>OUTPUT</b><p>실행 가능한 6개 Skill catalog</p></div><div class="fact"><b>실패</b><p>원본 바이트가 바뀌거나 계약이 끊기면 컴파일 중단</p></div></div></article>
+        <article class="element qwen"><div class="e-index">07</div><div class="e-name"><small>MODEL BOUNDARY</small><strong>Local Qwen 신원 확인</strong><code>ollama_client.py · identity()</code></div><div class="e-body"><div class="fact"><b>INPUT</b><p><code>http://127.0.0.1:11434</code>와 모델명</p></div><div class="fact"><b>처리</b><p>Ollama version·model digest·family·tools capability를 확인합니다.</p></div><div class="fact"><b>OUTPUT</b><p><code>endpoint_scope=LOOPBACK_ONLY</code></p></div><div class="fact"><b>경계</b><p>원격 LLM endpoint는 허용하지 않습니다.</p></div></div></article>
+        <article class="element"><div class="e-index">08</div><div class="e-name"><small>LEXICAL SCAN</small><strong>Anchor 후보 추출</strong><code>graph.py · anchor_ids()</code></div><div class="e-body"><div class="fact"><b>INPUT</b><p>질문 원문</p></div><div class="fact"><b>처리</b><p>node id·한글 label·alias가 문장에 실제 포함됐는지 비교합니다.</p></div><div class="fact"><b>OUTPUT</b><p>길이가 긴 순서의 최대 6개 후보</p></div><div class="fact"><b>주의</b><p>후보일 뿐 실행 route나 정답이 아닙니다.</p></div></div></article>
+      </div></div>
+    </details>
+
+    <details id="phase-b" class="card phase" open>
+      <summary><div class="phase-name"><span class="phase-number">B</span><div><h2>Local Qwen이 받는 문맥</h2><p>모델이 마음대로 인터넷 지식을 쓰지 못하도록 실행 경계를 만드는 구간</p></div></div></summary>
+      <div class="phase-body"><div class="element-list">
+        <article class="element"><div class="e-index">09</div><div class="e-name"><small>SYSTEM PROMPT</small><strong>Agent 역할·금지·완료조건</strong><code>agent.py · _system_prompt()</code></div><div class="e-body"><div class="fact"><b>포함</b><p>역할, 기준일, anchor 후보, Skill catalog</p></div><div class="fact"><b>명령</b><p>Observation만 근거로 사용하고 최소 1개 KAC Skill을 실행</p></div><div class="fact"><b>금지</b><p>일반 사전지식 채우기, 고정 경로, 근거 없는 claim</p></div><div class="fact"><b>완료</b><p><code>submit_answer_candidate</code> 도구 호출</p></div></div></article>
+        <article class="element qwen"><div class="e-index">10</div><div class="e-name"><small>OLLAMA CHAT</small><strong>첫 Qwen turn</strong><code>ollama_client.py · chat()</code></div><div class="e-body"><div class="fact"><b>INPUT</b><p>system+user message와 도구 JSON schema</p></div><div class="fact"><b>설정</b><p><code>temperature=0.2</code>, <code>num_predict=512</code></p></div><div class="fact"><b>OUTPUT</b><p>자연어 또는 하나 이상의 tool call</p></div><div class="fact"><b>기록</b><p>시간·prompt token·output token·content hash</p></div></div></article>
+      </div></div>
+    </details>
+
+    <details id="phase-c" class="card phase" open>
+      <summary><div class="phase-name"><span class="phase-number">C</span><div><h2>행동–Observation Loop</h2><p>Qwen의 선택을 실제 도구 실행으로 바꾸고 그 결과를 다시 Qwen에 돌려주는 구간</p></div></div></summary>
+      <div class="phase-body">
+        <div class="element-list">
+          <article class="element qwen"><div class="e-index">11</div><div class="e-name"><small>RECOVERY ADAPTER</small><strong>자연어 이탈 복구</strong><code>ollama_client.py · select_tool_action()</code></div><div class="e-body"><div class="fact"><b>조건</b><p>Qwen이 필요한 tool call 없이 자연어만 반환</p></div><div class="fact"><b>처리</b><p>같은 Local Qwen에 현재 lifecycle에서 허용된 도구만 JSON schema로 제시</p></div><div class="fact"><b>Qwen 선택</b><p>구체 concept·skill·inputs는 여전히 모델이 정합니다.</p></div><div class="fact"><b>경계</b><p>질문별 route map이나 하드코딩된 스킬 선택이 아닙니다.</p></div></div></article>
+          <article class="element"><div class="e-index">12</div><div class="e-name"><small>TOOL ACTION</small><strong>행동 기록·예산 검사</strong><code>agent.py · tool loop</code></div><div class="e-body"><div class="fact"><b>INPUT</b><p><code>tool_name + arguments</code></p></div><div class="fact"><b>처리</b><p>action hash를 만들고 누적 도구 수를 검사합니다.</p></div><div class="fact"><b>OUTPUT</b><p><code>tool_action</code> event</p></div><div class="fact"><b>실패</b><p>16회를 넘으면 <code>TOOL_CALL_BUDGET_EXCEEDED</code></p></div></div></article>
+        </div>
+        <div class="tool-grid">
+          <article class="tool"><code>observe_concept</code><p>alias를 node id로 해석하고 정의·경계·출처·적용 가능 스킬을 Observation으로 만듭니다.</p></article>
+          <article class="tool"><code>expand_relations</code><p>연결 edge를 읽고, 두 개념이 주어지면 실제 그래프의 최단 경로 후보를 관찰합니다.</p></article>
+          <article class="tool"><code>invoke_kac_skill</code><p>Qwen이 선택한 원자 스킬을 실제 Python handler로 실행하고 SkillRun을 생성합니다.</p></article>
+          <article class="tool"><code>request_missing_evidence</code><p>없는 사실을 추측하지 않고 사용자·기관에 확인할 항목과 질문을 만듭니다.</p></article>
+          <article class="tool"><code>submit_answer_candidate</code><p>답변 초안과 claim별 evidence ID를 Verifier에 제출합니다. 바로 공개되지는 않습니다.</p></article>
+        </div>
+        <div class="element-list" style="margin-top:9px">
+          <article class="element"><div class="e-index">13</div><div class="e-name"><small>OBSERVATION</small><strong>실행 결과를 증거로 등록</strong><code>agent_tools.py · execute()</code></div><div class="e-body"><div class="fact"><b>INPUT</b><p>각 도구의 실행 결과</p></div><div class="fact"><b>처리</b><p><code>concept:</code>, <code>edge:</code>, <code>skill:</code> evidence ID로 환경에 저장</p></div><div class="fact"><b>OUTPUT</b><p>상태·출처·observation hash를 가진 event</p></div><div class="fact"><b>다음</b><p>tool message로 Qwen의 다음 turn에 전달</p></div></div></article>
+          <article class="element qwen"><div class="e-index">14</div><div class="e-name"><small>LOOP</small><strong>Qwen이 다음 행동 재선택</strong><code>agent.py · for step in 1..10</code></div><div class="e-body"><div class="fact"><b>INPUT</b><p>이전 질문 + 모든 action/Observation</p></div><div class="fact"><b>처리</b><p>관찰을 보고 추가 개념·관계·스킬·제출 중 다음 행동 선택</p></div><div class="fact"><b>종료</b><p>검증 PASS 또는 단계·도구 예산 소진</p></div><div class="fact"><b>속도</b><p>이 순차 Qwen 호출이 현재 응답 지연의 대부분입니다.</p></div></div></article>
+        </div>
+      </div>
+    </details>
+
+    <details id="phase-d" class="card phase" open>
+      <summary><div class="phase-name"><span class="phase-number">D</span><div><h2>KAC 원자 스킬 하나의 실제 내부</h2><p>“스킬 파일이 있다”가 아니라 Runtime 코드가 실행되고 증거가 만들어지는 구간</p></div></div></summary>
+      <div class="phase-body"><div class="element-list">
+        <article class="element skill"><div class="e-index">15</div><div class="e-name"><small>SEVEN-NODE CONTRACT</small><strong>스킬의 구조적 정체성</strong><code>skills/atomic/&lt;skill&gt;/</code></div><div class="e-body"><div class="fact"><b>CHAIN</b><p>Identity → Goal → Task → Knowledge → Method → Skill → Runtime</p></div><div class="fact"><b>역할</b><p>무엇이며, 왜 하고, 무엇을 알고, 어떤 규칙으로 실행하는지 보존</p></div><div class="fact"><b>연결</b><p>각 node의 <code>derived_from</code>이 앞 node를 가리킵니다.</p></div><div class="fact"><b>출처</b><p>Knowledge의 source ref는 검증된 registry 항목만 허용</p></div></div></article>
+        <article class="element skill"><div class="e-index">16</div><div class="e-name"><small>SKILL EXECUTION</small><strong>계약 입력 검사·handler 실행</strong><code>skill_runtime.py · execute_skill()</code></div><div class="e-body"><div class="fact"><b>INPUT</b><p>Qwen이 만든 <code>skill_name + inputs</code></p></div><div class="fact"><b>검사</b><p>등록 스킬인지, 필수 입력이 있는지, handler가 설치됐는지 확인</p></div><div class="fact"><b>실행</b><p><code>skill_handlers.py</code>의 도메인 규칙을 Python으로 실행</p></div><div class="fact"><b>OUTPUT</b><p>answer·판정·missing evidence·rule trace</p></div></div></article>
+        <article class="element skill"><div class="e-index">17</div><div class="e-name"><small>DOMAIN VERDICT</small><strong>업무 판정 생성</strong><code>skill_handlers.py</code></div><div class="e-body"><div class="fact"><b>PROCEED</b><p>계약 입력 안에서 단일 후보나 행동 경로가 성립</p></div><div class="fact"><b>REVIEW</b><p>근거 부족·충돌·다음 단계 확인 필요</p></div><div class="fact"><b>STOP</b><p>이중사용·근거 없는 확정·실제 거래 등 금지 조건</p></div><div class="fact"><b>주의</b><p>사회적 Outcome 발생이나 공식 승인이라는 뜻은 아닙니다.</p></div></div></article>
+        <article class="element store"><div class="e-index">18</div><div class="e-name"><small>KAC SKILL RUN</small><strong>실행 증거 객체 생성</strong><code>runs/&lt;run&gt;/skills/*.json</code></div><div class="e-body"><div class="fact"><b>포함</b><p>chain fingerprint, 입력·출력 snapshot/hash, handler origin</p></div><div class="fact"><b>ID</b><p>고유 <code>skill:skill-run-&lt;uuid&gt;</code></p></div><div class="fact"><b>안정 ID</b><p><code>skill:&lt;skill-name&gt;:latest</code></p></div><div class="fact"><b>외부 행동</b><p><code>external_actions=[]</code>로 기록</p></div></div></article>
+      </div></div>
+    </details>
+
+    <details id="phase-e" class="card phase" open>
+      <summary><div class="phase-name"><span class="phase-number">E</span><div><h2>Claim 검증과 최종 공개</h2><p>Qwen 문장을 그대로 보여주지 않고 관찰 근거와 연결하는 구간</p></div></div></summary>
+      <div class="phase-body">
+        <div class="element-list">
+          <article class="element qwen"><div class="e-index">19</div><div class="e-name"><small>ANSWER CANDIDATE</small><strong>Qwen의 claim 제출</strong><code>{answer, claims[]}</code></div><div class="e-body"><div class="fact"><b>ANSWER</b><p>아직 검증되지 않은 설명 초안</p></div><div class="fact"><b>CLAIM</b><p>독립된 완전문장 단위</p></div><div class="fact"><b>EVIDENCE</b><p>각 claim이 인용하는 실제 Observation ID 배열</p></div><div class="fact"><b>경계</b><p>제출 자체는 사용자 공개를 의미하지 않습니다.</p></div></div></article>
+          <article class="element verify"><div class="e-index">20</div><div class="e-name"><small>VERIFIER</small><strong>근거 연결 검사</strong><code>verifier.py · verify_candidate()</code></div><div class="e-body"><div class="fact"><b>INPUT</b><p>candidate + anchors + evidence + SkillRuns + graph</p></div><div class="fact"><b>OUTPUT</b><p>PASS 또는 REVIEW와 정확한 누락 항목</p></div><div class="fact"><b>수정 지도</b><p><code>repair_evidence_by_concept</code></p></div><div class="fact"><b>공개</b><p>모든 검사를 통과한 claim text만 연결</p></div></div></article>
+        </div>
+        <div class="checks">
+          <div class="check"><b>1.</b> answer와 claim 존재</div><div class="check"><b>2.</b> 한글 완전문장·중국어 문장 차단</div><div class="check"><b>3.</b> 질문 anchor 전부 관찰</div>
+          <div class="check"><b>4.</b> anchor 2개 이상이면 관찰 edge로 연결</div><div class="check"><b>5.</b> KAC Skill 최소 1회 실행</div><div class="check"><b>6.</b> evidence ID가 실제 환경에 존재</div>
+          <div class="check"><b>7.</b> claim과 근거의 단어 겹침 18% 이상</div><div class="check"><b>8.</b> 언급한 CCS 개념마다 직접 근거 연결</div><div class="check"><b>9.</b> 출처와 실제 SkillRun 인용</div>
+          <div class="check"><b>10.</b> CCM/Scope·VCM/Scope 혼동 차단</div><div class="check"><b>11.</b> 탄소크레딧=배출권 혼동 차단</div><div class="check"><b>12.</b> 검증 결과와 source ref 목록 생성</div>
+        </div>
+        <div class="element-list" style="margin-top:9px">
+          <article class="element verify"><div class="e-index">21</div><div class="e-name"><small>LIMITED REPAIR</small><strong>관찰 근거 ID만 보완</strong><code>agent.py · _repair_observed_concept_citations()</code></div><div class="e-body"><div class="fact"><b>조건</b><p>문장은 맞고 이미 관찰한 concept ID만 누락</p></div><div class="fact"><b>처리</b><p>Verifier가 지정한 <code>concept:*</code> ID만 claim에 추가</p></div><div class="fact"><b>금지</b><p>문장·판정·미관찰 지식·잘못된 주장 자동 수정 안 함</p></div><div class="fact"><b>다음</b><p>같은 candidate를 다시 검증</p></div></div></article>
+          <article class="element store"><div class="e-index">22</div><div class="e-name"><small>FINAL PACKAGE</small><strong>답변 공개 또는 차단</strong><code>run_manifest.json</code></div><div class="e-body"><div class="fact"><b>PASS</b><p>검증된 claim text만 이어 붙인 답변 공개</p></div><div class="fact"><b>STOP</b><p><code>answer=null</code>, 실행·실패 증거는 보존</p></div><div class="fact"><b>포함</b><p>model identity, skill IDs, sources, metrics, locality flags</p></div><div class="fact"><b>주의</b><p>candidate의 자유로운 answer 초안을 그대로 내보내지 않습니다.</p></div></div></article>
+          <article class="element store"><div class="e-index">23</div><div class="e-name"><small>STREAM + AUDIT</small><strong>화면 표시·영구 감사 기록</strong><code>events.json + SQLite</code></div><div class="e-body"><div class="fact"><b>STREAM</b><p>각 event를 NDJSON 한 줄로 즉시 브라우저에 전달</p></div><div class="fact"><b>화면</b><p>오른쪽 trace에 행동·Observation·검증 표시</p></div><div class="fact"><b>파일</b><p>request, model, events, SkillRuns, manifest</p></div><div class="fact"><b>SQLite</b><p>지식 검색이 아닌 agent_run·agent_event 감사 저장</p></div></div></article>
+        </div>
+      </div>
+    </details>
+
+    <section id="actual-run" class="card actual">
+      <div class="actual-head"><div><h2 class="section-title">실제 Scope 2 PASS run에서 벌어진 일</h2><p class="section-copy">성공 장면만 정리하지 않고 잘못된 선택과 복구도 그대로 표시합니다. 전체 기록은 23개 event입니다.</p></div><span class="time-total">Qwen 7회 · 160.3초</span></div>
+      <div class="trace">
+        <div class="trace-row"><span>EVENT 01</span><b>Agent 시작</b><p>질문에서 <code>OPERATIONAL_BOUNDARY</code> anchor 후보 발견</p><time>—</time></div>
+        <div class="trace-row error"><span>02–05</span><b>첫 이탈</b><p>Qwen이 tool call 없이 답하려 함 → 같은 Qwen 행동 복구가 존재하지 않는 스킬명을 concept로 관찰 → <code>UNKNOWN_CONCEPT</code></p><time>58.6s</time></div>
+        <div class="trace-row error"><span>06–08</span><b>잘못된 확장</b><p>그 이름으로 관계 확장 시도 → 다시 <code>UNKNOWN_CONCEPT</code></p><time>8.6s</time></div>
+        <div class="trace-row"><span>09–11</span><b>스킬 실행</b><p>Qwen이 <code>scope-activity-classification</code>과 구매 전력 입력을 선택 → <code>SCOPE_2 · PROCEED</code></p><time>13.3s</time></div>
+        <div class="trace-row error"><span>12–15</span><b>첫 후보 보류</b><p>Scope 2 문장은 맞지만 운영 경계 concept를 아직 관찰하지 않아 Verifier가 <code>REVIEW</code></p><time>39.1s</time></div>
+        <div class="trace-row"><span>16–18</span><b>근거 보완</b><p>Qwen이 <code>OPERATIONAL_BOUNDARY</code>를 정확히 관찰해 concept evidence 생성</p><time>6.8s</time></div>
+        <div class="trace-row pass"><span>19–23</span><b>재제출·PASS</b><p>SkillRun과 concept evidence를 함께 인용한 claim 제출 → Verifier PASS → 최종 답변 공개</p><time>33.8s</time></div>
+      </div>
+      <div class="boundary-grid">
+        <article class="boundary"><strong>왜 오래 걸리나요?</strong><p>그래프와 Python 스킬이 느린 것이 아니라, 위 과정에서 14B Local Qwen을 순차적으로 7회 호출했고 prompt가 2,864에서 5,238 token까지 커졌기 때문입니다.</p></article>
+        <article class="boundary"><strong>왜 실패 장면도 남기나요?</strong><p>Agent가 항상 옳다고 꾸미지 않고 어떤 오판을 Observation으로 받고 어떻게 복구했는지 보여주는 것이 실제 실행 증명의 일부이기 때문입니다.</p></article>
+      </div>
+    </section>
+
+    <p class="final-line">한 문장 요약: 서버는 실행 경계를 만들고, Local Qwen은 다음 행동과 스킬 입력을 선택하고, CCS는 관찰 가능한 지식 관계를 제공하고, KAC Runtime은 업무 판정을 실행하며, Verifier는 그 판정이 아니라 “Qwen의 문장에 실제 근거가 연결됐는지”를 최종 검사합니다.</p>
+  </div>
+</body>
+</html>
