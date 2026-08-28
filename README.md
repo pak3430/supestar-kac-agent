@@ -99,6 +99,8 @@ supestar-agent serve --port 4177
 
 브라우저에서 [http://127.0.0.1:4177](http://127.0.0.1:4177)을 엽니다.
 
+`SUBMIT_CANDIDATE`는 관계사슬과 SkillRun이 끝난 뒤 Local Qwen이 최종 claim JSON을 생성하는 단계입니다. 실행 관찰에는 `최종 답변 구성 시작`과 경과 시간이 표시되며, 한 번의 로컬 생성은 최대 120초로 제한됩니다. 모델 또는 브라우저 연결이 결과 없이 끝나면 화면이 계속 `실행 중`으로 남지 않고 명시적 오류를 표시합니다.
+
 내부 작동 구조를 한 화면으로 설명한 시각화는 [http://127.0.0.1:4177/runtime-visual.html](http://127.0.0.1:4177/runtime-visual.html)에서 볼 수 있습니다.
 
 컴포넌트·데이터 흐름·판단 책임을 구분한 아키텍처 구조도는 [http://127.0.0.1:4177/kac-architecture.html](http://127.0.0.1:4177/kac-architecture.html)에서 볼 수 있습니다.

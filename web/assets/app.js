@@ -22,6 +22,7 @@ const eventLabels = {
   observation: ["Observation", "실행 결과가 다음 Qwen turn의 근거가 됩니다."],
   verification: ["Verifier 판정", "claim·개념·edge·출처 연결을 검사했습니다."],
   direct_answer_rejected: ["직접 답변 차단", "근거 제출 형식이 아니므로 답변을 공개하지 않았습니다."],
+  candidate_structuring_started: ["최종 답변 구성 시작", "Local Qwen이 관찰된 관계와 SkillRun을 근거 claim JSON으로 만들고 있습니다."],
   candidate_structured: ["로컬 구조화", "같은 Qwen이 자연어 초안을 근거 claim JSON으로 변환했습니다."],
   action_structured: ["로컬 행동 복구", "자연어로 이탈한 Qwen을 같은 로컬 모델의 구조화 출력으로 도구 행동에 복귀시켰습니다."],
   trusted_skill_context_bound: ["신뢰 요청 문맥 결합", "원 질문·사용자 역할·기준일을 Skill 입력에 서버 값으로 결합했습니다."],
@@ -84,6 +85,7 @@ function summarizeEvent(event) {
   if (event.event_type === "tool_action") return `${event.tool_name} ${JSON.stringify(event.arguments || {})}`;
   if (event.event_type === "observation") return `${event.tool_name} → ${event.status}`;
   if (event.event_type === "verification") return `${event.verdict} · 누락 ${(event.missing_requirements || []).length} · 미관찰 인용 ${(event.unsupported_evidence_ids || []).length}`;
+  if (event.event_type === "candidate_structuring_started") return `attempt ${event.adapter_attempt || 1} · 로컬 생성 중 (보통 1~2분)`;
   if (event.event_type === "candidate_structured") return `JSON schema adapter · attempt ${event.adapter_attempt || 1}`;
   if (event.event_type === "action_structured") return `${event.tool_name} · JSON schema action adapter`;
   if (event.event_type === "trusted_skill_context_bound") return `${event.skill_name} · ${(event.bindings || []).map((item) => item.field).join(" · ")}`;
@@ -191,6 +193,13 @@ async function runQuestion(question) {
   runStatus.className = "run-status running";
   statusText.textContent = "로컬 Qwen이 Observation을 보고 다음 행동을 선택합니다. 시간이 걸릴 수 있습니다.";
   addMessage("user", question);
+  let terminalPacketReceived = false;
+  let finalPhaseStartedAt = null;
+  const progressTimer = window.setInterval(() => {
+    if (!finalPhaseStartedAt) return;
+    const elapsed = Math.floor((Date.now() - finalPhaseStartedAt) / 1000);
+    statusText.textContent = `관계사슬·스킬 실행 완료 · Local Qwen 최종 답변 생성 중 ${elapsed}초`;
+  }, 1000);
   try {
     const response = await fetch("/api/chat/stream", {
       method: "POST",
@@ -209,8 +218,18 @@ async function runQuestion(question) {
       for (const line of lines) {
         if (!line.trim()) continue;
         const packet = JSON.parse(line);
-        if (packet.kind === "event") addTrace(packet.event);
+        if (packet.kind === "event") {
+          addTrace(packet.event);
+          if (
+            packet.event.event_type === "candidate_structuring_started"
+            || (packet.event.event_type === "lifecycle_gate_selected" && ["SUBMIT_CANDIDATE", "SUBMIT_REPAIR"].includes(packet.event.gate))
+          ) {
+            finalPhaseStartedAt ||= Date.now();
+            statusText.textContent = "관계사슬·스킬 실행 완료 · Local Qwen이 최종 답변을 생성하고 있습니다.";
+          }
+        }
         if (packet.kind === "result") {
+          terminalPacketReceived = true;
           const result = packet.result;
           rawResult.textContent = JSON.stringify(result, null, 2);
           const answer = result.status === "PASS"
@@ -221,9 +240,17 @@ async function runQuestion(question) {
           runStatus.className = `run-status ${result.status === "PASS" ? "pass" : "stop"}`;
           statusText.textContent = result.status === "PASS" ? "검증된 claim만 답변으로 공개했습니다." : "실행 기록은 보존되었으며 답변은 차단되었습니다.";
         }
-        if (packet.kind === "error") throw new Error(packet.error.message);
+        if (packet.kind === "error") {
+          terminalPacketReceived = true;
+          throw new Error(packet.error.message);
+        }
       }
-      if (done) break;
+      if (done) {
+        if (!terminalPacketReceived) {
+          throw new Error("실행 스트림이 최종 결과 없이 종료되었습니다. 로컬 모델 또는 브라우저 연결이 중단됐습니다.");
+        }
+        break;
+      }
     }
   } catch (error) {
     addMessage("agent", `실행 중 오류가 발생했습니다: ${error.message}`);
@@ -231,6 +258,7 @@ async function runQuestion(question) {
     runStatus.className = "run-status stop";
     statusText.textContent = "오류가 발생했습니다. 실행 원문을 확인해 주세요.";
   } finally {
+    window.clearInterval(progressTimer);
     setRunning(false);
     input.focus();
   }

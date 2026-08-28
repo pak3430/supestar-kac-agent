@@ -199,6 +199,8 @@ def verify_candidate(
         claim_text = str(claim.get("text", ""))
         if len(re.findall(r"[가-힣]", claim_text)) < 4 or re.search(r"[\u4e00-\u9fff]", claim_text):
             missing.append(f"claim_language_korean_required:{index}")
+        if re.search(r"(?:concept|edge|skill):[A-Za-z0-9_:-]+", claim_text, re.IGNORECASE):
+            missing.append(f"claim_internal_evidence_id_leak:{index}")
         ids = claim.get("evidence_ids")
         ids = ids if isinstance(ids, list) else []
         if not ids:

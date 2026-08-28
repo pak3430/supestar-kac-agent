@@ -25,6 +25,8 @@ Qwen은 그래프 파일 전체나 목표까지의 경로를 받지 않습니다
 
 런타임의 공통 lifecycle gate는 필수 anchor 관찰, 1-hop 관계 선택 반복, 관계 탐색 종료, Skill 실행, 후보 제출 순서를 관리합니다. 다음 edge·backtrack·Skill·입력은 Qwen이 고릅니다. 후보 edge는 근거가 아니며 실제 선택된 edge만 Traversal Ledger와 evidence에 들어갑니다. 최단경로 함수는 탐색 완료 뒤 AI 경로의 단절과 길이를 사후 확인할 뿐 중간 node를 알려주지 않습니다.
 
+`SUBMIT_CANDIDATE`에 진입하면 관계 탐색과 Skill 실행은 이미 끝난 상태입니다. 이때 `candidate_structuring_started` 이벤트와 경과 시간을 먼저 화면에 표시하고, Local Qwen이 최대 120초 안에서 1~3개의 간결한 claim을 생성합니다. 검증이 `REVIEW`이면 같은 게이트에서 동일 출력을 반복하지 않고 다음 `SUBMIT_REPAIR` 게이트에 검증 피드백을 넘깁니다. 스트림이 최종 결과 없이 닫히는 경우에도 화면은 실행 중으로 남지 않고 연결 중단 오류를 표시합니다.
+
 ### 3. KAC Skill Runtime
 
 `skills/atomic/*`의 각 스킬은 다음 일곱 계약을 유지합니다.

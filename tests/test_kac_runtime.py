@@ -565,6 +565,32 @@ class KACRuntimeTests(unittest.TestCase):
                 "answer_cited_full_agent_relation_path",
                 split_verification["missing_requirements"],
             )
+            leaked_candidate = {
+                "answer":"ESG와 탄소크레딧은 연결됩니다. (edge:esg:sdgs)",
+                "claims":[{
+                    "text":"ESG와 탄소크레딧은 연결됩니다. (edge:esg:sdgs)",
+                    "evidence_ids":[
+                        "edge:esg:sdgs",
+                        "edge:sdgs:13",
+                        "edge:forest:sdg13",
+                        "edge:forest:credit",
+                        "skill:esg-carbon-action-path:latest",
+                    ],
+                }],
+            }
+            leaked_verification = verify_candidate(
+                leaked_candidate,
+                anchors=anchors,
+                evidence=environment.evidence,
+                skill_runs=environment.skill_runs,
+                graph=graph,
+                traversal=environment.traversal.snapshot(),
+            )
+            self.assertEqual(leaked_verification["verdict"], "REVIEW")
+            self.assertIn(
+                "claim_internal_evidence_id_leak:0",
+                leaked_verification["missing_requirements"],
+            )
 
     def test_verifier_rejects_preloaded_relation_edges_without_agent_traversal(self) -> None:
         graph = KnowledgeGraph(ROOT)

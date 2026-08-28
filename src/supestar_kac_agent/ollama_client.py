@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import time
 from typing import Any
+from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
@@ -11,6 +12,8 @@ LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}
 
 
 class OllamaClient:
+    supports_primary_structured_actions = True
+
     def __init__(self, endpoint: str, model: str, *, timeout: int = 300) -> None:
         parsed = urlparse(endpoint)
         if parsed.scheme != "http" or parsed.hostname not in LOOPBACK_HOSTS:
@@ -19,12 +22,23 @@ class OllamaClient:
         self.model = model
         self.timeout = timeout
 
-    def _request(self, path: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+    def _request(
+        self,
+        path: str,
+        payload: dict[str, Any] | None = None,
+        *,
+        timeout: int | None = None,
+    ) -> dict[str, Any]:
         data = None if payload is None else json.dumps(payload, ensure_ascii=False).encode("utf-8")
         headers = {} if data is None else {"Content-Type": "application/json"}
         request = Request(f"{self.endpoint}{path}", data=data, headers=headers)
-        with urlopen(request, timeout=self.timeout) as response:
-            return json.load(response)
+        try:
+            with urlopen(request, timeout=timeout or self.timeout) as response:
+                return json.load(response)
+        except HTTPError as error:
+            raise RuntimeError(f"Ollama {path} returned HTTP {error.code}") from error
+        except (TimeoutError, URLError) as error:
+            raise RuntimeError(f"Ollama {path} request failed: {error.reason if isinstance(error, URLError) else error}") from error
 
     def identity(self) -> dict[str, Any]:
         version = self._request("/api/version")
@@ -99,11 +113,18 @@ class OllamaClient:
                 "claims": {
                     "type": "array",
                     "minItems": 1,
+                    "maxItems": 3,
                     "items": {
                         "type": "object",
                         "properties": {
-                            "text": {"type": "string"},
-                            "evidence_ids": {"type": "array", "minItems": 1, "items": evidence_id_schema},
+                            "text": {"type": "string", "maxLength": 260},
+                            "evidence_ids": {
+                                "type": "array",
+                                "minItems": 1,
+                                "maxItems": 12,
+                                "uniqueItems": True,
+                                "items": evidence_id_schema,
+                            },
                         },
                         "required": ["text", "evidence_ids"],
                     },
@@ -122,7 +143,8 @@ class OllamaClient:
             "model": self.model,
             "stream": False,
             "format": schema,
-            "options": {"temperature": 0.1, "num_predict": 1200},
+            "keep_alive": "30m",
+            "options": {"temperature": 0.1, "num_predict": 640},
             "messages": [
                 {
                     "role": "system",
@@ -138,13 +160,14 @@ class OllamaClient:
                         "관계 질문에서는 질문의 양쪽 anchor를 한 문장 안에 함께 언급하는 claim을 최소 하나 만들고, "
                         "그 claim에 active_traversal_path=true인 전체 edge를 모두 인용하세요. "
                         "전체 claims 중 최소 하나는 skill: 로 시작하는 허용된 실제 SkillRun evidence_id를 정확히 인용하세요. "
+                        "concept:, edge:, skill: 같은 내부 evidence_id는 evidence_ids 배열에만 넣고 claim text나 answer 문장에는 쓰지 마세요. "
                         "previous_verification_feedback의 repair_evidence_by_concept가 있으면 해당 claim에 제시된 evidence_id를 추가하세요. "
-                        "근거가 약한 초안 문장은 버리세요. answer에는 claim text들을 자연스러운 순서로만 연결하세요."
+                        "근거가 약한 초안 문장은 버리세요. claim은 1~3개로 간결하게 만들고 answer는 claim text들을 최대 5문장으로 자연스럽게 연결하세요."
                     ),
                 },
                 {"role": "user", "content": json.dumps(prompt_payload, ensure_ascii=False)},
             ],
-        })
+        }, timeout=min(self.timeout, 120))
         content = str((response.get("message") or {}).get("content", ""))
         try:
             candidate = json.loads(content)
@@ -210,7 +233,8 @@ class OllamaClient:
             "model": self.model,
             "stream": False,
             "format": schema,
-            "options": {"temperature": 0.1, "num_predict": 900},
+            "keep_alive": "30m",
+            "options": {"temperature": 0.1, "num_predict": 640},
             "messages": [
                 {
                     "role": "system",

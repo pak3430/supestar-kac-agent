@@ -394,7 +394,17 @@ def run_agent(
         nonlocal candidate, verification, stop_reason
         adapter_draft = draft
         adapter_feedback = verification
-        for adapter_attempt in range(1, 3):
+        # One model attempt per lifecycle gate. A REVIEW advances to the next
+        # SUBMIT_REPAIR gate with verifier feedback, avoiding an identical
+        # deterministic retry against the same gate context.
+        for adapter_attempt in range(1, 2):
+            emit({
+                "event_type":"candidate_structuring_started",
+                "step":step,
+                "adapter":"OLLAMA_JSON_SCHEMA",
+                "adapter_attempt":adapter_attempt,
+                "message":"Local Qwen이 관찰 근거를 최종 claim JSON으로 구성하고 있습니다.",
+            })
             try:
                 structured = client.structure_candidate(
                     question=question,
@@ -577,12 +587,14 @@ def run_agent(
             deterministic_transition_tools = {
                 "backtrack_relation_step",
                 "stop_relation_traversal",
+                "invoke_kac_skill",
             }
             allowed_tool_names = [item["function"]["name"] for item in definitions]
             use_compact_action_adapter = (
                 len(allowed_tool_names) == 1
                 and allowed_tool_names[0] in deterministic_transition_tools
                 and hasattr(client, "select_tool_action")
+                and getattr(client, "supports_primary_structured_actions", False)
             )
             try:
                 if use_compact_action_adapter:
@@ -793,7 +805,14 @@ def run_agent(
                     adapter_draft = str(message.get("content", ""))
                     adapter_feedback = verification
                     adapter_error = False
-                    for adapter_attempt in range(1, 3):
+                    for adapter_attempt in range(1, 2):
+                        emit({
+                            "event_type":"candidate_structuring_started",
+                            "step":step,
+                            "adapter":"OLLAMA_JSON_SCHEMA",
+                            "adapter_attempt":adapter_attempt,
+                            "message":"Local Qwen이 관찰 근거를 최종 claim JSON으로 구성하고 있습니다.",
+                        })
                         try:
                             structured = client.structure_candidate(
                                 question=question,
