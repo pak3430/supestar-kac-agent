@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="수페스타 Local Qwen, CCS, KAC Skill, Verifier의 실제 실행 구조">
+  <title>수페스타 내부 작동 구조</title>
+  <style>
+    :root {
+      --ink: #17241d;
+      --muted: #607068;
+      --forest: #1e5b3d;
+      --forest-dark: #123b29;
+      --lime: #d3ec76;
+      --mint: #e9f3eb;
+      --paper: #fbfdfa;
+      --white: #fff;
+      --line: #d5e1d7;
+      --amber: #a26c12;
+      --red: #a3413d;
+      --blue: #356b87;
+      --shadow: 0 18px 48px rgba(30, 70, 46, .1);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 12% 4%, rgba(211,236,118,.24), transparent 27rem),
+        linear-gradient(180deg, #f8fbf7, #edf4ee);
+      font-family: Pretendard, "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    a { color: inherit; }
+    .page { width: min(1220px, calc(100% - 36px)); margin: 0 auto; padding: 28px 0 52px; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+    .brand { display: flex; align-items: center; gap: 11px; text-decoration: none; font-weight: 900; }
+    .brand-mark { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 13px; color: var(--lime); background: var(--forest-dark); font-size: 24px; }
+    .back { padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; background: rgba(255,255,255,.76); color: var(--forest); text-decoration: none; font-size: 12px; font-weight: 800; }
+    .hero { max-width: 890px; padding: 64px 0 38px; }
+    .eyebrow { margin: 0; color: var(--forest); font-size: 11px; font-weight: 900; letter-spacing: .14em; }
+    h1 { margin: 13px 0 17px; font-size: clamp(38px, 5.5vw, 66px); line-height: 1.06; letter-spacing: -.055em; }
+    .hero p:last-child { max-width: 830px; margin: 0; color: var(--muted); font-size: 17px; line-height: 1.75; word-break: keep-all; }
+    .badges { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 22px; }
+    .badge { padding: 7px 10px; border: 1px solid #bfd0c3; border-radius: 999px; background: rgba(255,255,255,.75); color: var(--forest-dark); font-size: 10px; font-weight: 900; letter-spacing: .06em; }
+
+    .card { border: 1px solid rgba(191,208,195,.9); border-radius: 24px; background: rgba(255,255,255,.9); box-shadow: var(--shadow); }
+    .flow-card { padding: 26px; }
+    .section-head { display: flex; justify-content: space-between; gap: 18px; align-items: end; margin-bottom: 20px; }
+    .section-head h2 { margin: 0; font-size: 22px; letter-spacing: -.035em; }
+    .section-head p { margin: 0; color: var(--muted); font-size: 11px; }
+    .flow { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 22px; align-items: stretch; }
+    .step { position: relative; min-height: 166px; padding: 17px; border: 1px solid var(--line); border-radius: 18px; background: var(--paper); }
+    .step::after { content: "→"; position: absolute; top: 50%; right: -19px; transform: translateY(-50%); color: #8fa398; font-weight: 900; }
+    .step:last-child::after { display: none; }
+    .number { display: inline-grid; width: 27px; height: 27px; place-items: center; border-radius: 9px; background: var(--forest-dark); color: var(--lime); font-size: 11px; font-weight: 900; }
+    .step h3 { margin: 13px 0 7px; font-size: 15px; letter-spacing: -.025em; }
+    .step p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.55; word-break: keep-all; }
+    .step small { display: block; margin-top: 11px; color: var(--forest); font-size: 9px; font-weight: 850; overflow-wrap: anywhere; }
+    .step.model { border-color: #8daf98; background: #f2f8f3; }
+    .step.skill { border-color: #c4d77d; background: #fbfde9; }
+    .step.verify { border-color: #99b6c5; background: #f2f8fb; }
+    .loop { display: flex; align-items: center; justify-content: center; gap: 9px; margin: 17px auto 0; width: fit-content; padding: 9px 13px; border-radius: 999px; color: var(--forest); background: var(--mint); font-size: 11px; font-weight: 800; }
+    .loop b { color: var(--amber); }
+
+    .decision { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 18px; }
+    .decision div { padding: 13px 15px; border-radius: 14px; font-size: 11px; line-height: 1.5; }
+    .decision strong { display: block; margin-bottom: 3px; font-size: 12px; }
+    .pass { color: var(--forest); background: #e6f4e8; }
+    .review { color: var(--amber); background: #fff3d7; }
+    .stop { color: var(--red); background: #fae9e8; }
+
+    .detail-grid { display: grid; grid-template-columns: 1.08fr .92fr; gap: 16px; margin-top: 16px; }
+    .detail-card { padding: 24px; }
+    .detail-card h2 { margin: 0 0 17px; font-size: 19px; letter-spacing: -.03em; }
+    .layer { display: grid; grid-template-columns: 145px 1fr; gap: 15px; align-items: start; padding: 14px 0; border-top: 1px solid var(--line); }
+    .layer:first-of-type { border-top: 0; padding-top: 0; }
+    .layer strong { color: var(--forest-dark); font-size: 12px; }
+    .layer p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.6; }
+    .chain { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin-top: 8px; }
+    .layer > .chain { grid-column: 2; margin-top: -6px; }
+    .chain span { padding: 5px 7px; border-radius: 7px; background: var(--mint); color: var(--forest); font-size: 9px; font-weight: 850; }
+    .chain i { color: #9aaba0; font-style: normal; }
+
+    .not-box { display: grid; gap: 9px; }
+    .not-item { display: grid; grid-template-columns: 27px 1fr; gap: 10px; padding: 12px; border-radius: 13px; background: #f5f8f5; }
+    .not-item b { display: grid; width: 27px; height: 27px; place-items: center; border-radius: 9px; color: var(--red); background: #f9e7e5; }
+    .not-item strong { display: block; font-size: 12px; }
+    .not-item p { margin: 3px 0 0; color: var(--muted); font-size: 10px; line-height: 1.45; }
+
+    .example { margin-top: 16px; padding: 25px; }
+    .example h2 { margin: 0 0 5px; font-size: 20px; letter-spacing: -.03em; }
+    .example > p { margin: 0 0 19px; color: var(--muted); font-size: 11px; }
+    .example-flow { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 20px; }
+    .example-step { position: relative; padding: 14px; border-radius: 15px; background: #f5f8f5; }
+    .example-step::after { content: "→"; position: absolute; right: -16px; top: 50%; transform: translateY(-50%); color: #94a59a; font-weight: 900; }
+    .example-step:last-child::after { display: none; }
+    .example-step span { display: block; margin-bottom: 6px; color: var(--forest); font-size: 9px; font-weight: 900; letter-spacing: .08em; }
+    .example-step strong { font-size: 11px; line-height: 1.5; }
+
+    .footer-note { margin: 17px 2px 0; color: var(--muted); font-size: 10px; line-height: 1.55; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .94em; }
+
+    @media (max-width: 1080px) {
+      .flow { grid-template-columns: repeat(3, 1fr); }
+      .step:nth-child(3)::after { display: none; }
+      .example-flow { grid-template-columns: 1fr; gap: 8px; }
+      .example-step::after { content: "↓"; top: auto; right: 50%; bottom: -16px; transform: translateX(50%); }
+    }
+    @media (max-width: 760px) {
+      .page { width: min(100% - 24px, 1220px); }
+      .hero { padding-top: 44px; }
+      .flow, .detail-grid { grid-template-columns: 1fr; }
+      .step { min-height: auto; }
+      .step::after, .step:nth-child(3)::after { content: "↓"; display: block; top: auto; right: 50%; bottom: -20px; transform: translateX(50%); }
+      .decision { grid-template-columns: 1fr; }
+      .layer { grid-template-columns: 1fr; gap: 6px; }
+      .layer > .chain { grid-column: 1; margin-top: 2px; }
+      .section-head { display: block; }
+      .section-head p { margin-top: 6px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="topbar">
+      <a class="brand" href="/"><span class="brand-mark">⌁</span><span>수페스타 KAC Agent</span></a>
+      <a class="back" href="/">← 챗봇으로 돌아가기</a>
+    </header>
+
+    <section class="hero">
+      <p class="eyebrow">ACTUAL INTERNAL RUNTIME</p>
+      <h1>질문에 답하는 것이 아니라,<br>관찰하고 실행한 뒤 검증합니다.</h1>
+      <p>Local Qwen이 정해진 답안을 찾는 구조가 아닙니다. 질문에서 발견된 개념 후보를 출발점으로 현재 Observation을 보고 다음 행동을 고르고, 실제 KAC 원자 스킬의 결과를 근거로 답변 후보를 제출합니다.</p>
+      <div class="badges">
+        <span class="badge">LOCAL QWEN · OLLAMA LOOPBACK</span>
+        <span class="badge">CCS 29 NODES · 31 EDGES</span>
+        <span class="badge">6 EXECUTABLE KAC SKILLS</span>
+        <span class="badge">NO INTERNET</span>
+      </div>
+    </section>
+
+    <section class="card flow-card">
+      <div class="section-head">
+        <h2>실제 한 번의 질문이 지나가는 길</h2>
+        <p>각 질문은 이전 대화와 분리된 새 Agent run입니다.</p>
+      </div>
+      <div class="flow">
+        <article class="step">
+          <span class="number">1</span>
+          <h3>질문 접수</h3>
+          <p>질문 원문과 역할·기준일을 새 run에 기록합니다.</p>
+          <small>request.json</small>
+        </article>
+        <article class="step">
+          <span class="number">2</span>
+          <h3>Anchor 후보 발견</h3>
+          <p>문장에 실제로 등장한 CCS 어휘만 후보로 찾습니다.</p>
+          <small>graph.anchor_ids(question)</small>
+        </article>
+        <article class="step model">
+          <span class="number">3</span>
+          <h3>Local Qwen 행동 선택</h3>
+          <p>현재 관찰 결과를 보고 개념 관찰·관계 확장·스킬 실행 중 다음 행동을 선택합니다.</p>
+          <small>Ollama · qwen2.5 · loopback</small>
+        </article>
+        <article class="step">
+          <span class="number">4</span>
+          <h3>CCS 관찰</h3>
+          <p>개념 정의와 근거 edge를 도구로 읽고 Observation을 Qwen에 돌려줍니다.</p>
+          <small>observe_concept · expand_relations</small>
+        </article>
+        <article class="step skill">
+          <span class="number">5</span>
+          <h3>KAC Skill 실행</h3>
+          <p>Qwen이 고른 원자 스킬의 Python Runtime이 실제 판정 결과를 만듭니다.</p>
+          <small>invoke_kac_skill → KACSkillRun</small>
+        </article>
+        <article class="step verify">
+          <span class="number">6</span>
+          <h3>Claim 검증</h3>
+          <p>문장마다 관찰한 개념·edge·SkillRun·출처가 연결됐는지 검사합니다.</p>
+          <small>submit_answer_candidate → Verifier</small>
+        </article>
+      </div>
+      <div class="loop"><b>↺</b> 근거가 부족하면 답을 꾸미지 않고 다시 관찰하거나 스킬을 실행합니다.</div>
+      <div class="decision">
+        <div class="pass"><strong>PASS</strong>검증된 claim만 조립해 사용자에게 공개</div>
+        <div class="review"><strong>REVIEW</strong>누락된 근거를 관찰하거나 보완 질문 생성</div>
+        <div class="stop"><strong>STOP</strong>근거 없는 주장·실제 거래·잘못된 전제를 차단</div>
+      </div>
+    </section>
+
+    <div class="detail-grid">
+      <section class="card detail-card">
+        <h2>내부에는 무엇이 있나요?</h2>
+        <div class="layer">
+          <strong>Local Qwen</strong>
+          <p>문장을 외워서 반환하는 답안표가 아니라, 매 turn의 Observation을 보고 다음 도구 행동과 구체 입력을 선택합니다.</p>
+        </div>
+        <div class="layer">
+          <strong>CCS 지식 환경</strong>
+          <p>ESG·SDGs·Scope·탄소시장·산림탄소 개념과 출처가 있는 관계를 관찰할 수 있는 그래프입니다. 벡터 문서 검색 결과를 그대로 붙이는 구조가 아닙니다.</p>
+        </div>
+        <div class="layer">
+          <strong>KAC 원자 스킬</strong>
+          <p>Scope 분류, 시장 단위 비교, 산림 ESG 매핑, 절차, 거래 준비도 등을 실제 코드로 실행합니다.</p>
+          <div class="chain"><span>Identity</span><i>→</i><span>Goal</span><i>→</i><span>Task</span><i>→</i><span>Knowledge</span><i>→</i><span>Method</span><i>→</i><span>Skill</span><i>→</i><span>Runtime</span></div>
+        </div>
+        <div class="layer">
+          <strong>감사 기록</strong>
+          <p><code>events.json</code>과 <code>SkillRun</code> 파일에는 무엇을 관찰하고 실행했는지가 남습니다. SQLite는 지식 DB가 아니라 run 감사 저장소입니다.</p>
+        </div>
+      </section>
+
+      <section class="card detail-card">
+        <h2>답변에 사용되지 않는 것</h2>
+        <div class="not-box">
+          <div class="not-item"><b>×</b><div><strong>검증 질문 은행</strong><p>화면 예시와 회귀 테스트 전용입니다. Agent가 답안이나 route map으로 읽지 않습니다.</p></div></div>
+          <div class="not-item"><b>×</b><div><strong>인터넷 검색과 원격 AI API</strong><p>실행 중 웹 검색을 하지 않고, 로컬 Ollama의 Qwen만 호출합니다.</p></div></div>
+          <div class="not-item"><b>×</b><div><strong>이전 질문의 대화 내용</strong><p>새 질문마다 독립 run을 만들며 이전 질문을 다음 모델 입력에 섞지 않습니다.</p></div></div>
+          <div class="not-item"><b>×</b><div><strong>실제 거래와 등록부 변경</strong><p>구매·결제·등록부 변경 요청은 설명 범위를 넘어가므로 실행하지 않습니다.</p></div></div>
+          <div class="not-item"><b>×</b><div><strong>검증되지 않은 문장</strong><p>근거 ID가 연결되지 않은 claim은 사용자 답변으로 공개되지 않습니다.</p></div></div>
+        </div>
+      </section>
+    </div>
+
+    <section class="card example">
+      <h2>실제 PASS 예시 · 구매 전력은 Scope 몇인가?</h2>
+      <p>Local Qwen 실실행 기록 <code>agent-run-d4b3d7d3…</code>의 핵심만 단순화했습니다.</p>
+      <div class="example-flow">
+        <div class="example-step"><span>QUESTION</span><strong>외부 전력회사에서 구매한 전기를 사무실에서 사용</strong></div>
+        <div class="example-step"><span>OBSERVE</span><strong>운영 경계<br><code>OPERATIONAL_BOUNDARY</code></strong></div>
+        <div class="example-step"><span>EXECUTE</span><strong><code>scope-activity-classification</code></strong></div>
+        <div class="example-step"><span>SKILL OUTPUT</span><strong><code>SCOPE_2 · PROCEED</code></strong></div>
+        <div class="example-step"><span>VERIFIER</span><strong>개념 + SkillRun + 출처 연결<br><code>PASS</code></strong></div>
+      </div>
+    </section>
+
+    <p class="footer-note">요약: Qwen은 “무엇을 할지” 선택하고, CCS는 “무엇을 관찰할지” 제공하며, KAC Skill은 “무엇을 실행했는지” 만들고, Verifier는 “무엇만 공개할지” 결정합니다.</p>
+  </div>
+</body>
+</html>

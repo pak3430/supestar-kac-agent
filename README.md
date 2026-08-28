@@ -84,6 +84,8 @@ supestar-agent serve --port 4177
 
 브라우저에서 [http://127.0.0.1:4177](http://127.0.0.1:4177)을 엽니다.
 
+내부 작동 구조를 한 화면으로 설명한 시각화는 [http://127.0.0.1:4177/runtime-visual.html](http://127.0.0.1:4177/runtime-visual.html)에서 볼 수 있습니다.
+
 설치 없이 저장소 안에서 실행할 수도 있습니다.
 
 ```bash

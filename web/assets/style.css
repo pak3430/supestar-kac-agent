@@ -44,6 +44,8 @@ button { cursor: pointer; }
 .brand strong { font-size: 19px; letter-spacing: -.03em; }
 .brand small { color: var(--muted); margin-top: 2px; font-size: 11px; letter-spacing: .08em; }
 .runtime-badges { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.structure-link { border: 1px solid #9db7a4; background: var(--forest-dark); color: white; border-radius: 999px; padding: 7px 11px; font-size: 10px; font-weight: 850; letter-spacing: .04em; text-decoration: none; }
+.structure-link:hover { background: var(--forest); }
 .badge { border: 1px solid var(--line); background: rgba(255,255,255,.7); border-radius: 999px; padding: 7px 10px; font-size: 10px; font-weight: 800; letter-spacing: .08em; }
 .badge.ready { border-color: #79a889; color: var(--forest); }
 .badge.error { border-color: #d6a3a0; color: var(--red); }
