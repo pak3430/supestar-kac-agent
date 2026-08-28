@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import unittest
+from unittest.mock import patch
 
 from supestar_kac_agent.contracts import Observation, ToolAction, VerificationDecision
 from supestar_kac_agent.doctor import _local_endpoint, model_summary
+from supestar_kac_agent.ollama_client import OllamaClient
 from supestar_kac_agent.policy import REQUIRED_TOOLS, load_policy
 
 
@@ -37,6 +39,58 @@ class FoundationTests(unittest.TestCase):
         })
         self.assertTrue(summary["tool_capable"])
         self.assertEqual(summary["family"], "qwen2")
+
+    def test_single_anchor_candidate_contract_is_compact_and_answer_is_assembled(self) -> None:
+        client = OllamaClient("http://127.0.0.1:11434", "qwen2.5:test")
+        response = {
+            "message": {"content": '{"claims":[{"text":"ESG는 환경·사회·거버넌스를 함께 살피는 관점입니다.","evidence_ids":["concept:ESG","skill:esg-definition:run-1"]}]}'},
+            "eval_count": 92,
+            "done_reason": "stop",
+        }
+        with patch.object(client, "_request", return_value=response) as request:
+            result = client.structure_candidate(
+                question="ESG란 무엇인가요?",
+                draft="{}",
+                evidence_catalog=[
+                    {"evidence_id":"concept:ESG"},
+                    {"evidence_id":"skill:esg-definition:run-1"},
+                ],
+                required_anchor_ids=["ESG"],
+            )
+
+        payload = request.call_args.args[1]
+        self.assertEqual(payload["format"]["properties"]["claims"]["maxItems"], 1)
+        self.assertNotIn("answer", payload["format"]["properties"])
+        self.assertEqual(payload["options"]["num_predict"], 384)
+        self.assertEqual(result["candidate"]["answer"], result["candidate"]["claims"][0]["text"])
+        self.assertTrue(result["metrics"]["single_anchor_contract"])
+
+    def test_candidate_structuring_retries_once_after_truncated_json(self) -> None:
+        client = OllamaClient("http://127.0.0.1:11434", "qwen2.5:test")
+        truncated = {
+            "message": {"content": '{"claims":[{"text":"잘린 문장"'},
+            "eval_count": 384,
+            "done_reason": "length",
+        }
+        complete = {
+            "message": {"content": '{"claims":[{"text":"ESG는 조직의 지속가능성 관점입니다.","evidence_ids":["concept:ESG","skill:esg-definition:run-1"]}]}'},
+            "eval_count": 105,
+            "done_reason": "stop",
+        }
+        with patch.object(client, "_request", side_effect=[truncated, complete]) as request:
+            result = client.structure_candidate(
+                question="ESG란 무엇인가요?",
+                draft="{}",
+                evidence_catalog=[
+                    {"evidence_id":"concept:ESG"},
+                    {"evidence_id":"skill:esg-definition:run-1"},
+                ],
+                required_anchor_ids=["ESG"],
+            )
+
+        self.assertEqual(request.call_count, 2)
+        self.assertEqual(result["metrics"]["serialization_attempts"], 2)
+        self.assertEqual(result["metrics"]["attempt_metrics"][0]["done_reason"], "length")
 
 
 if __name__ == "__main__":

@@ -128,7 +128,9 @@ def _repair_observed_concept_citations(
     ]
     needs_executed_skill_citation = "cited_executed_skill_output" in missing
     if (
-        not uncovered_requirements and not relation_requirements
+        not uncovered_requirements
+        and not relation_requirements
+        and not needs_executed_skill_citation
     ) or (
         verification.get("unsupported_evidence_ids")
         or verification.get("forbidden_confusions")
@@ -145,6 +147,22 @@ def _repair_observed_concept_citations(
     repaired = deepcopy(candidate)
     claims = repaired.get("claims") if isinstance(repaired.get("claims"), list) else []
     changed = False
+    executed_skill_names = verification.get("executed_skill_names", [])
+    if needs_executed_skill_citation and not uncovered_requirements and not relation_requirements:
+        # The runtime executes one selected KAC Skill before submission. When a
+        # single-claim candidate omits only that run's citation, bind the stable
+        # alias already present in the observed evidence catalog. This changes
+        # provenance metadata only; it never changes the model-authored text.
+        if len(claims) != 1 or len(executed_skill_names) != 1 or not isinstance(claims[0], dict):
+            return None
+        skill_evidence_id = f"skill:{executed_skill_names[0]}:latest"
+        evidence_ids = claims[0].get("evidence_ids")
+        evidence_ids = list(evidence_ids) if isinstance(evidence_ids, list) else []
+        if skill_evidence_id not in evidence_ids:
+            evidence_ids.append(skill_evidence_id)
+            claims[0]["evidence_ids"] = evidence_ids
+            changed = True
+        needs_executed_skill_citation = False
     repair_map = verification.get("repair_evidence_by_concept", {})
     for item in uncovered_requirements:
         _, index_text, concept_id = str(item).split(":", 2)
@@ -411,6 +429,7 @@ def run_agent(
                     draft=adapter_draft,
                     evidence_catalog=environment.evidence_catalog(),
                     verification_feedback=adapter_feedback,
+                    required_anchor_ids=anchors,
                 )
             except Exception as error:
                 stop_reason = "CANDIDATE_STRUCTURING_ERROR"
@@ -496,6 +515,22 @@ def run_agent(
                 verification = repaired_verification
                 if verification["verdict"] == "PASS":
                     return True, False
+            verification_signature = _hash({
+                "missing_requirements":verification.get("missing_requirements", []),
+                "unsupported_evidence_ids":verification.get("unsupported_evidence_ids", []),
+                "forbidden_confusions":verification.get("forbidden_confusions", []),
+            })
+            verification_signatures[verification_signature] = verification_signatures.get(verification_signature, 0) + 1
+            if verification_signatures[verification_signature] >= 2:
+                stop_reason = "REPEATED_VERIFICATION_FAILURE"
+                emit({
+                    "event_type":"repeated_verification_blocked",
+                    "step":step,
+                    "verification_signature":verification_signature,
+                    "occurrences":verification_signatures[verification_signature],
+                    "rule":"STOP_IDENTICAL_SUBMIT_REPAIR_LOOP",
+                })
+                return False, True
             adapter_draft = json.dumps(candidate, ensure_ascii=False)
             adapter_feedback = verification
         return False, False
@@ -819,6 +854,7 @@ def run_agent(
                                 draft=adapter_draft,
                                 evidence_catalog=environment.evidence_catalog(),
                                 verification_feedback=adapter_feedback,
+                                required_anchor_ids=anchors,
                             )
                         except Exception as error:
                             stop_reason = "CANDIDATE_STRUCTURING_ERROR"

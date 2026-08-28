@@ -778,6 +778,28 @@ class KACRuntimeTests(unittest.TestCase):
             "concept:OPERATIONAL_BOUNDARY",
         ])
 
+    def test_single_claim_can_bind_the_one_executed_skill_citation(self) -> None:
+        candidate = {
+            "answer":"ESG는 조직의 환경·사회·지배구조 책임을 운영에 반영하는 관점입니다.",
+            "claims":[{
+                "text":"ESG는 조직의 환경·사회·지배구조 책임을 운영에 반영하는 관점입니다.",
+                "evidence_ids":["concept:ESG"],
+            }],
+        }
+        repaired = _repair_observed_concept_citations(candidate, {
+            "missing_requirements":["cited_executed_skill_output"],
+            "unsupported_evidence_ids":[],
+            "forbidden_confusions":[],
+            "repair_evidence_by_concept":{},
+            "repair_relation_evidence_by_claim":{},
+            "executed_skill_names":["esg-carbon-action-path"],
+        })
+        self.assertIsNotNone(repaired)
+        self.assertEqual(repaired["claims"][0]["evidence_ids"], [
+            "concept:ESG",
+            "skill:esg-carbon-action-path:latest",
+        ])
+
     def test_lifecycle_gate_advances_without_reopening_completed_stages(self) -> None:
         graph = KnowledgeGraph(ROOT)
         anchors = ["OPERATIONAL_BOUNDARY", "ACTIVITY_DATA"]

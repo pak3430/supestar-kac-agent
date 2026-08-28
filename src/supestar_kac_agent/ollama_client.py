@@ -95,6 +95,7 @@ class OllamaClient:
         draft: str,
         evidence_catalog: list[dict[str, Any]],
         verification_feedback: dict[str, Any] | None = None,
+        required_anchor_ids: list[str] | None = None,
     ) -> dict[str, Any]:
         """Use the same local Qwen only to serialize grounded claims.
 
@@ -102,6 +103,9 @@ class OllamaClient:
         constrained output adapter for models that intermittently return natural
         language instead of a function call.
         """
+        anchors = list(dict.fromkeys(required_anchor_ids or []))
+        single_anchor = len(anchors) <= 1
+        max_claims = 1 if single_anchor else 3
         allowed_evidence_ids = [item["evidence_id"] for item in evidence_catalog]
         evidence_id_schema: dict[str, Any] = {"type": "string"}
         if allowed_evidence_ids:
@@ -109,11 +113,10 @@ class OllamaClient:
         schema = {
             "type": "object",
             "properties": {
-                "answer": {"type": "string"},
                 "claims": {
                     "type": "array",
                     "minItems": 1,
-                    "maxItems": 3,
+                    "maxItems": max_claims,
                     "items": {
                         "type": "object",
                         "properties": {
@@ -127,54 +130,104 @@ class OllamaClient:
                             },
                         },
                         "required": ["text", "evidence_ids"],
+                        "additionalProperties": False,
                     },
                 },
             },
-            "required": ["answer", "claims"],
+            "required": ["claims"],
+            "additionalProperties": False,
         }
         prompt_payload = {
             "question": question,
             "unverified_draft": draft,
             "allowed_evidence": evidence_catalog,
             "previous_verification_feedback": verification_feedback,
+            "required_anchor_ids": anchors,
+            "output_contract": {
+                "claim_count": 1 if single_anchor else "1~3",
+                "answer_field_prohibited": True,
+                "complete_json_required": True,
+            },
         }
         started = time.perf_counter()
-        response = self._request("/api/chat", {
-            "model": self.model,
-            "stream": False,
-            "format": schema,
-            "keep_alive": "30m",
-            "options": {"temperature": 0.1, "num_predict": 640},
-            "messages": [
-                {
-                    "role": "system",
-                    "content": (
-                        "당신은 수페스타 KAC Agent의 로컬 claim 직렬화기입니다. "
-                        "새 지식을 만들지 말고 allowed_evidence만 사용하세요. "
-                        "authoritative_skill_output의 verdict·answer·candidate_scope를 그대로 존중하고 다른 Scope나 판정을 만들지 마세요. "
-                        "각 claim은 반드시 한글 중심의 독립적인 한국어 완전문장이어야 합니다. 중국어 문장을 쓰지 마세요. "
-                        "그 문장에 언급한 모든 CCS 개념에 "
-                        "직접 닿는 evidence_id를 빠짐없이 인용하세요. anchor 사이의 relation 주장은 "
-                        "allowed_evidence에 포함된 AI 선택 traversal edge 전체를 인용하세요. 후보로 보기만 한 edge는 사용하지 마세요. "
-                        "active_traversal_path=false인 backtrack 이력은 최종 anchor 관계 설명에 사용하지 마세요. "
-                        "관계 질문에서는 질문의 양쪽 anchor를 한 문장 안에 함께 언급하는 claim을 최소 하나 만들고, "
-                        "그 claim에 active_traversal_path=true인 전체 edge를 모두 인용하세요. "
-                        "전체 claims 중 최소 하나는 skill: 로 시작하는 허용된 실제 SkillRun evidence_id를 정확히 인용하세요. "
-                        "concept:, edge:, skill: 같은 내부 evidence_id는 evidence_ids 배열에만 넣고 claim text나 answer 문장에는 쓰지 마세요. "
-                        "previous_verification_feedback의 repair_evidence_by_concept가 있으면 해당 claim에 제시된 evidence_id를 추가하세요. "
-                        "근거가 약한 초안 문장은 버리세요. claim은 1~3개로 간결하게 만들고 answer는 claim text들을 최대 5문장으로 자연스럽게 연결하세요."
+        system_prompt = (
+            "당신은 수페스타 KAC Agent의 로컬 claim 직렬화기입니다. "
+            "새 지식을 만들지 말고 allowed_evidence만 사용하세요. "
+            "authoritative_skill_output의 verdict·answer·candidate_scope를 그대로 존중하고 다른 Scope나 판정을 만들지 마세요. "
+            "각 claim은 반드시 한글 중심의 독립적인 한국어 완전문장이어야 합니다. 중국어 문장을 쓰지 마세요. "
+            "그 문장에 언급한 모든 CCS 개념에 직접 닿는 evidence_id를 빠짐없이 인용하세요. anchor 사이의 relation 주장은 "
+            "allowed_evidence에 포함된 AI 선택 traversal edge 전체를 인용하세요. 후보로 보기만 한 edge는 사용하지 마세요. "
+            "active_traversal_path=false인 backtrack 이력은 최종 anchor 관계 설명에 사용하지 마세요. "
+            "관계 질문에서는 질문의 양쪽 anchor를 한 문장 안에 함께 언급하는 claim을 최소 하나 만들고, "
+            "그 claim에 active_traversal_path=true인 전체 edge를 모두 인용하세요. "
+            "전체 claims 중 최소 하나는 skill: 로 시작하는 허용된 실제 SkillRun evidence_id를 정확히 인용하세요. "
+            "concept:, edge:, skill: 같은 내부 evidence_id는 evidence_ids 배열에만 넣고 claim text에는 쓰지 마세요. "
+            "previous_verification_feedback의 repair_evidence_by_concept가 있으면 해당 claim에 제시된 evidence_id를 추가하세요. "
+            "근거가 약한 초안 문장은 버리세요. JSON에는 claims만 넣고 answer나 설명 필드는 만들지 마세요. "
+            f"claims는 최대 {max_claims}개이며 각 text는 한 문장으로 간결하게 쓰세요."
+        )
+        if single_anchor:
+            system_prompt += (
+                " 이 요청은 단일 anchor 질문입니다. claims를 정확히 1개만 만들고, 그 한 문장에서 질문에 직접 답하며 "
+                "관찰된 anchor와 실제 SkillRun 근거를 함께 인용하세요. 관계 경로나 다른 주제로 확장하지 마세요."
+            )
+
+        token_limits = (384, 512) if single_anchor else (640, 800)
+        attempt_metrics: list[dict[str, Any]] = []
+        candidate: dict[str, Any] | None = None
+        response: dict[str, Any] = {}
+        last_error: Exception | None = None
+        for serialization_attempt, num_predict in enumerate(token_limits, start=1):
+            retry_instruction = ""
+            if serialization_attempt > 1:
+                retry_instruction = " 직전 출력은 완전한 JSON 객체가 되기 전에 끝났습니다. 더 짧게 쓰고 반드시 JSON을 닫으세요."
+            response = self._request("/api/chat", {
+                "model": self.model,
+                "stream": False,
+                "format": schema,
+                "keep_alive": "30m",
+                "options": {"temperature": 0.1, "num_predict": num_predict},
+                "messages": [
+                    {"role": "system", "content": system_prompt + retry_instruction},
+                    {"role": "user", "content": json.dumps(prompt_payload, ensure_ascii=False)},
+                ],
+            }, timeout=min(self.timeout, 120))
+            attempt_metrics.append({
+                "serialization_attempt": serialization_attempt,
+                "num_predict": num_predict,
+                "total_duration_ms": round(response.get("total_duration", 0) / 1_000_000, 1),
+                "prompt_eval_count": response.get("prompt_eval_count"),
+                "eval_count": response.get("eval_count"),
+                "done_reason": response.get("done_reason"),
+            })
+            content = str((response.get("message") or {}).get("content", ""))
+            try:
+                parsed = json.loads(content)
+                if not isinstance(parsed, dict):
+                    raise RuntimeError("Local Qwen structured candidate was not an object")
+                claims = parsed.get("claims")
+                if not isinstance(claims, list) or not claims:
+                    raise RuntimeError("Local Qwen structured candidate had no claims")
+                candidate = {
+                    "answer": " ".join(
+                        str(item.get("text", "")).strip()
+                        for item in claims
+                        if isinstance(item, dict) and str(item.get("text", "")).strip()
                     ),
-                },
-                {"role": "user", "content": json.dumps(prompt_payload, ensure_ascii=False)},
-            ],
-        }, timeout=min(self.timeout, 120))
-        content = str((response.get("message") or {}).get("content", ""))
-        try:
-            candidate = json.loads(content)
-        except json.JSONDecodeError as error:
-            raise RuntimeError("Local Qwen structured candidate was not valid JSON") from error
-        if not isinstance(candidate, dict):
-            raise RuntimeError("Local Qwen structured candidate was not an object")
+                    "claims": claims,
+                }
+                if not candidate["answer"]:
+                    raise RuntimeError("Local Qwen structured candidate had no answer text")
+                break
+            except (json.JSONDecodeError, RuntimeError) as error:
+                last_error = error
+        if candidate is None:
+            final_metrics = attempt_metrics[-1] if attempt_metrics else {}
+            raise RuntimeError(
+                "Local Qwen structured candidate was not valid complete JSON "
+                f"after {len(attempt_metrics)} attempts "
+                f"(done_reason={final_metrics.get('done_reason')}, eval_count={final_metrics.get('eval_count')})"
+            ) from last_error
         return {
             "candidate": candidate,
             "metrics": {
@@ -184,6 +237,10 @@ class OllamaClient:
                 "prompt_eval_count": response.get("prompt_eval_count"),
                 "eval_count": response.get("eval_count"),
                 "done_reason": response.get("done_reason"),
+                "serialization_attempts": len(attempt_metrics),
+                "attempt_metrics": attempt_metrics,
+                "single_anchor_contract": single_anchor,
+                "max_claims": max_claims,
             },
         }
 
