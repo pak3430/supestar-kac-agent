@@ -7,12 +7,37 @@ from typing import Any
 from .graph import KnowledgeGraph
 
 
+_KOREAN_SUFFIXES = (
+    "하였습니다", "했습니다", "분류됩니다", "해당합니다", "아닙니다",
+    "합니다", "됩니다", "입니다", "하면서", "하는", "하고", "하며", "하에",
+    "에서", "에게", "부터", "까지", "보다", "처럼", "으로",
+    "은", "는", "이", "가", "을", "를", "의", "에", "도", "만", "와", "과", "로", "한",
+)
+
+
+def _stem_token(token: str) -> str:
+    if not re.fullmatch(r"[가-힣]+", token):
+        return token
+    for suffix in _KOREAN_SUFFIXES:
+        if token.endswith(suffix) and len(token) - len(suffix) >= 2:
+            return token[:-len(suffix)]
+    return token
+
+
 def _tokens(value: str) -> set[str]:
     return {
-        token.casefold()
+        _stem_token(token.casefold())
         for token in re.findall(r"[0-9A-Za-z가-힣]+", value)
         if len(token) >= 2
     }
+
+
+def _scalar_texts(value: Any) -> list[str]:
+    if isinstance(value, dict):
+        return [text for item in value.values() for text in _scalar_texts(item)]
+    if isinstance(value, list):
+        return [text for item in value for text in _scalar_texts(item)]
+    return [str(value)] if value is not None else []
 
 
 def _evidence_text(item: dict[str, Any], graph: KnowledgeGraph) -> str:
@@ -24,6 +49,8 @@ def _evidence_text(item: dict[str, Any], graph: KnowledgeGraph) -> str:
         " ".join(str(alias) for alias in concept.get("aliases", [])),
         str(output.get("answer", "")),
         " ".join(str(row.get("reason", "")) for row in output.get("reason_per_edge", []) if isinstance(row, dict)),
+        " ".join(_scalar_texts(item.get("input_snapshot", {}))),
+        " ".join(_scalar_texts(output.get("rule_trace", []))),
     ]
     for endpoint in (item.get("from"), item.get("to")):
         if endpoint in graph.nodes:
@@ -61,7 +88,7 @@ def _evidence_covers_concept(evidence_id: str, concept_id: str, evidence: dict[s
     return False
 
 
-def _connected(anchors: list[str], observed_edges: set[str], graph: KnowledgeGraph) -> bool:
+def anchors_connected(anchors: list[str], observed_edges: set[str], graph: KnowledgeGraph) -> bool:
     if len(anchors) < 2:
         return True
     adjacency: dict[str, set[str]] = {}
@@ -108,7 +135,7 @@ def verify_candidate(
     for anchor in anchors:
         if anchor not in observed_concepts:
             missing.append(f"anchor_observation:{anchor}")
-    if len(anchors) >= 2 and not _connected(anchors, observed_edges, graph):
+    if len(anchors) >= 2 and not anchors_connected(anchors, observed_edges, graph):
         missing.append("observed_relation_path_between_anchors")
     if not skill_runs:
         missing.append("executed_kac_skill")

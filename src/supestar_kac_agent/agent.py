@@ -13,7 +13,7 @@ from .graph import KnowledgeGraph
 from .ollama_client import OllamaClient
 from .policy import load_policy, project_root
 from .run_store import AgentRunStore
-from .verifier import verify_candidate
+from .verifier import anchors_connected, verify_candidate
 
 
 EventSink = Callable[[dict[str, Any]], None]
@@ -22,6 +22,33 @@ EventSink = Callable[[dict[str, Any]], None]
 def _hash(value: Any) -> str:
     encoded = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()
+
+
+def _schema_violations(value: Any, schema: dict[str, Any], path: str = "arguments") -> list[str]:
+    violations: list[str] = []
+    expected_type = schema.get("type")
+    if expected_type == "object":
+        if not isinstance(value, dict):
+            return [f"{path}:object_required"]
+        for required in schema.get("required", []):
+            if required not in value:
+                violations.append(f"{path}.{required}:required")
+        for key, child_schema in schema.get("properties", {}).items():
+            if key in value:
+                violations.extend(_schema_violations(value[key], child_schema, f"{path}.{key}"))
+    elif expected_type == "array":
+        if not isinstance(value, list):
+            return [f"{path}:array_required"]
+        if len(value) < int(schema.get("minItems", 0)):
+            violations.append(f"{path}:min_items")
+        item_schema = schema.get("items", {})
+        for index, item in enumerate(value):
+            violations.extend(_schema_violations(item, item_schema, f"{path}[{index}]"))
+    elif expected_type == "string" and not isinstance(value, str):
+        violations.append(f"{path}:string_required")
+    if "enum" in schema and value not in schema["enum"]:
+        violations.append(f"{path}:not_in_allowed_enum")
+    return violations
 
 
 def _system_prompt(*, anchors: list[str], catalog: list[dict[str, Any]], role: str, as_of_date: str) -> str:
@@ -53,22 +80,31 @@ def _repair_observed_concept_citations(
     """Add only verifier-proposed, already observed evidence IDs.
 
     This does not rewrite a claim or invent knowledge. It is limited to the case
-    where every remaining failure is an uncovered concept citation and the
-    verifier has an observed repair ID for that exact concept.
+    where every remaining failure is an uncovered concept citation or the
+    grounding-overlap consequence of that missing citation, and the verifier
+    has an observed repair ID for that exact concept.
     """
     missing = verification.get("missing_requirements", [])
+    uncovered_requirements = [
+        item for item in missing
+        if str(item).startswith("claim_uncovered_concept:")
+    ]
     if (
-        not missing
+        not uncovered_requirements
         or verification.get("unsupported_evidence_ids")
         or verification.get("forbidden_confusions")
-        or not all(str(item).startswith("claim_uncovered_concept:") for item in missing)
+        or not all(
+            str(item).startswith("claim_uncovered_concept:")
+            or str(item).startswith("claim_grounding_overlap:")
+            for item in missing
+        )
     ):
         return None
     repaired = deepcopy(candidate)
     claims = repaired.get("claims") if isinstance(repaired.get("claims"), list) else []
     changed = False
     repair_map = verification.get("repair_evidence_by_concept", {})
-    for item in missing:
+    for item in uncovered_requirements:
         _, index_text, concept_id = str(item).split(":", 2)
         index = int(index_text)
         if index >= len(claims) or not isinstance(claims[index], dict):
@@ -84,6 +120,93 @@ def _repair_observed_concept_citations(
             claims[index]["evidence_ids"] = evidence_ids
             changed = True
     return repaired if changed else None
+
+
+def _normalize_executed_skill_evidence_ids(
+    candidate: dict[str, Any],
+    evidence: dict[str, dict[str, Any]],
+) -> tuple[dict[str, Any], list[dict[str, str]]]:
+    """Repair only a missing `skill:` namespace for an exact observed ID."""
+    normalized = deepcopy(candidate)
+    replacements: list[dict[str, str]] = []
+    claims = normalized.get("claims") if isinstance(normalized.get("claims"), list) else []
+    for claim in claims:
+        if not isinstance(claim, dict) or not isinstance(claim.get("evidence_ids"), list):
+            continue
+        values = []
+        for raw in claim["evidence_ids"]:
+            evidence_id = str(raw)
+            replacement = evidence_id
+            if evidence_id not in evidence:
+                namespaced = f"skill:{evidence_id}"
+                if namespaced in evidence and (
+                    evidence_id.startswith("skill-run-")
+                    or evidence_id.endswith(":latest")
+                ):
+                    replacement = namespaced
+                    replacements.append({"from":evidence_id, "to":replacement})
+            values.append(replacement)
+        claim["evidence_ids"] = values
+    return normalized, replacements
+
+
+def _lifecycle_gate(
+    environment: ToolEnvironment,
+    anchors: list[str],
+    graph: KnowledgeGraph,
+    *,
+    force_submit: bool = False,
+) -> tuple[str, list[dict[str, Any]], dict[str, Any]]:
+    """Expose only tools that can advance the current evidence lifecycle.
+
+    The gate is generic and verifier-driven: it never maps a question to a
+    particular skill or answer. Qwen still chooses the concrete relation,
+    skill, and inputs inside the currently valid stage.
+    """
+    observed_concepts = {
+        evidence_id.split(":", 1)[1]
+        for evidence_id in environment.evidence
+        if evidence_id.startswith("concept:")
+    }
+    observed_edges = {
+        evidence_id
+        for evidence_id in environment.evidence
+        if evidence_id.startswith("edge:")
+    }
+    unobserved_anchors = [anchor for anchor in anchors if anchor not in observed_concepts]
+    connected = anchors_connected(anchors, observed_edges, graph)
+    state = {
+        "unobserved_anchors":unobserved_anchors,
+        "anchors_connected":connected,
+        "skill_run_count":len(environment.skill_runs),
+    }
+    if force_submit:
+        return "SUBMIT_REPAIR", environment.definitions(
+            allowed_tool_names={"submit_answer_candidate"},
+        ), state
+    if unobserved_anchors:
+        return "OBSERVE_REQUIRED_ANCHORS", environment.definitions(
+            allowed_tool_names={"observe_concept"},
+            concept_choices=unobserved_anchors,
+        ), state
+    if len(anchors) >= 2 and not connected:
+        return "CONNECT_OBSERVED_ANCHORS", environment.definitions(
+            allowed_tool_names={"expand_relations"},
+            relation_endpoint_choices=anchors,
+        ), state
+    if not environment.skill_runs:
+        applicable_skills = sorted({
+            skill_name
+            for anchor in anchors
+            for skill_name in graph.nodes.get(anchor, {}).get("applicable_skills", [])
+        })
+        return "EXECUTE_KAC_SKILL", environment.definitions(
+            allowed_tool_names={"invoke_kac_skill"},
+            skill_choices=applicable_skills or None,
+        ), state
+    return "SUBMIT_CANDIDATE", environment.definitions(
+        allowed_tool_names={"submit_answer_candidate"},
+    ), state
 
 
 def run_agent(
@@ -123,6 +246,7 @@ def run_agent(
     consecutive_direct_answer_rejections = 0
     candidate: dict[str, Any] | None = None
     verification: dict[str, Any] | None = None
+    verification_signatures: dict[str, int] = {}
     inference_metrics: list[dict[str, Any]] = []
     force_submit_next = False
 
@@ -148,12 +272,19 @@ def run_agent(
     stop_reason = "MAX_STEPS_REACHED"
     try:
         for step in range(1, max_steps + 1):
-            definitions = environment.definitions()
-            if force_submit_next:
-                definitions = [
-                    item for item in definitions
-                    if item["function"]["name"] == "submit_answer_candidate"
-                ]
+            lifecycle_gate, definitions, lifecycle_state = _lifecycle_gate(
+                environment,
+                anchors,
+                graph,
+                force_submit=force_submit_next,
+            )
+            emit({
+                "event_type":"lifecycle_gate_selected",
+                "step":step,
+                "gate":lifecycle_gate,
+                "allowed_tool_names":[item["function"]["name"] for item in definitions],
+                **lifecycle_state,
+            })
             try:
                 response = client.chat(messages, definitions)
             except Exception as error:
@@ -179,26 +310,7 @@ def run_agent(
             })
             messages.append(message)
             if not calls and hasattr(client, "select_tool_action"):
-                observed_concepts = sorted(
-                    evidence_id.split(":", 1)[1]
-                    for evidence_id in environment.evidence
-                    if evidence_id.startswith("concept:")
-                )
-                unobserved_anchors = [anchor for anchor in anchors if anchor not in observed_concepts]
-                observed_edges = {
-                    evidence_id for evidence_id in environment.evidence if evidence_id.startswith("edge:")
-                }
-                recovery_tool_names: set[str] = set()
-                if unobserved_anchors:
-                    recovery_tool_names = {"observe_concept"}
-                elif not environment.skill_runs:
-                    recovery_tool_names = {"invoke_kac_skill"}
-                elif len(anchors) >= 2 and not observed_edges:
-                    recovery_tool_names = {"expand_relations"}
-                recovery_definitions = [
-                    item for item in definitions
-                    if item["function"]["name"] in recovery_tool_names
-                ]
+                recovery_definitions = definitions
                 if recovery_definitions:
                     try:
                         recovered = client.select_tool_action(
@@ -248,7 +360,7 @@ def run_agent(
                 prerequisites_ready = (
                     not unobserved_anchors
                     and bool(environment.skill_runs)
-                    and (len(anchors) < 2 or bool(observed_edges))
+                    and anchors_connected(anchors, observed_edges, graph)
                 )
                 if prerequisites_ready and hasattr(client, "structure_candidate"):
                     adapter_draft = str(message.get("content", ""))
@@ -336,6 +448,10 @@ def run_agent(
             force_submit_next = False
             tool_messages = []
             completed = False
+            definition_by_name = {
+                item["function"]["name"]:item["function"]
+                for item in definitions
+            }
             for call in calls:
                 tool_calls_used += 1
                 function = call.get("function") or {}
@@ -349,12 +465,50 @@ def run_agent(
                     "action_hash":_hash({"step":step,"tool_name":tool_name,"arguments":arguments}),
                 }
                 emit(action)
-                if tool_calls_used > max_tool_calls:
+                allowed_definition = definition_by_name.get(tool_name)
+                validation_arguments = arguments
+                if tool_name == "submit_answer_candidate":
+                    validation_arguments, _ = _normalize_executed_skill_evidence_ids(
+                        arguments,
+                        environment.evidence,
+                    )
+                argument_violations = (
+                    _schema_violations(
+                        validation_arguments,
+                        allowed_definition.get("parameters", {}),
+                    )
+                    if allowed_definition else []
+                )
+                if allowed_definition is None:
+                    observation = {
+                        "status":"REJECTED_TOOL_OUTSIDE_LIFECYCLE_GATE",
+                        "tool_name":tool_name,
+                        "allowed_tool_names":sorted(definition_by_name),
+                    }
+                elif argument_violations:
+                    observation = {
+                        "status":"REJECTED_ARGUMENTS_OUTSIDE_LIFECYCLE_GATE",
+                        "tool_name":tool_name,
+                        "violations":argument_violations,
+                    }
+                elif tool_calls_used > max_tool_calls:
                     observation = {"status":"STOP","error":"TOOL_CALL_BUDGET_EXCEEDED"}
                 else:
                     observation = environment.execute(tool_name, arguments)
                 if tool_name == "submit_answer_candidate" and observation.get("status") == "CANDIDATE_RECEIVED":
                     candidate = observation["candidate"]
+                    candidate, evidence_replacements = _normalize_executed_skill_evidence_ids(
+                        candidate,
+                        environment.evidence,
+                    )
+                    if evidence_replacements:
+                        emit({
+                            "event_type":"candidate_evidence_normalized",
+                            "step":step,
+                            "normalization":"EXACT_EXECUTED_SKILL_ID_NAMESPACE_ONLY",
+                            "replacements":evidence_replacements,
+                            "candidate_hash":_hash(candidate),
+                        })
                     verification = verify_candidate(
                         candidate,
                         anchors=anchors,
@@ -369,6 +523,20 @@ def run_agent(
                         "repair_rule":"REVIEW이면 사용자에게 묻기 전에 missing_requirements에 맞는 도구 관찰을 수행하고, unsupported_evidence_ids는 실제 관찰된 evidence_id로 교체하세요.",
                     }
                     emit({"event_type":"verification","step":step,**verification})
+                    verification_signature = _hash({
+                        "missing":verification.get("missing_requirements", []),
+                        "unsupported":verification.get("unsupported_evidence_ids", []),
+                        "forbidden":verification.get("forbidden_confusions", []),
+                    })
+                    verification_signatures[verification_signature] = verification_signatures.get(verification_signature, 0) + 1
+                    if verification_signatures[verification_signature] >= 2:
+                        emit({
+                            "event_type":"repeated_verification_blocked",
+                            "step":step,
+                            "verification_signature":verification_signature,
+                            "occurrences":verification_signatures[verification_signature],
+                            "rule":"DO_NOT_REEXECUTE_SKILL_FOR_REPEATED_CITATION_ERROR",
+                        })
                     repaired_candidate = _repair_observed_concept_citations(candidate, verification)
                     if repaired_candidate is not None:
                         repaired_verification = verify_candidate(
@@ -404,15 +572,12 @@ def run_agent(
                         observation["verification"] = verification
                     if verification["verdict"] == "PASS":
                         completed = True
-                    elif (
-                        not verification["unsupported_evidence_ids"]
-                        and not any(
+                    elif not any(
                             requirement.startswith("anchor_observation:")
                             or requirement == "observed_relation_path_between_anchors"
                             or requirement == "executed_kac_skill"
                             for requirement in verification["missing_requirements"]
-                        )
-                    ):
+                        ):
                         force_submit_next = True
                 emit({
                     "event_type":"observation",

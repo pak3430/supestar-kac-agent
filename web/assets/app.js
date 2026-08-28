@@ -16,6 +16,7 @@ const featuredQuestionIds = new Set([
 
 const eventLabels = {
   agent_started: ["Agent run 시작", "질문에서 anchor 후보를 찾고 로컬 모델 경계를 기록했습니다."],
+  lifecycle_gate_selected: ["실행 단계 게이트", "완료된 단계를 다시 열지 않고 현재 증거 상태에 필요한 도구만 허용합니다."],
   llm_turn: ["Local Qwen 판단", "관찰 결과를 바탕으로 다음 행동을 선택했습니다."],
   tool_action: ["도구 행동", "Qwen이 선택한 행동을 실행합니다."],
   observation: ["Observation", "실행 결과가 다음 Qwen turn의 근거가 됩니다."],
@@ -24,6 +25,8 @@ const eventLabels = {
   candidate_structured: ["로컬 구조화", "같은 Qwen이 자연어 초안을 근거 claim JSON으로 변환했습니다."],
   action_structured: ["로컬 행동 복구", "자연어로 이탈한 Qwen을 같은 로컬 모델의 구조화 출력으로 도구 행동에 복귀시켰습니다."],
   candidate_evidence_repaired: ["관찰 근거 인용 복구", "문장 내용은 바꾸지 않고 검증기가 지정한 이미 관찰된 evidence_id만 보완했습니다."],
+  candidate_evidence_normalized: ["SkillRun ID 정규화", "실제로 실행된 SkillRun과 정확히 일치하는 ID에 누락된 skill: namespace만 복구했습니다."],
+  repeated_verification_blocked: ["반복 오류 차단", "같은 검증 오류에서는 스킬을 다시 실행하지 않고 인용 형식 수정만 허용합니다."],
   model_error: ["모델 오류", "오류를 숨기지 않고 실행을 안전하게 중단합니다."],
   agent_completed: ["Agent run 종료", "최종 실행 상태를 저장했습니다."],
 };
@@ -67,6 +70,7 @@ function addMessage(role, text, result = null) {
 
 function summarizeEvent(event) {
   if (event.event_type === "agent_started") return `anchors: ${(event.anchor_candidates || []).join(" · ") || "없음"}`;
+  if (event.event_type === "lifecycle_gate_selected") return `${event.gate} · 허용 ${(event.allowed_tool_names || []).join(" · ")} · 미관찰 anchor ${(event.unobserved_anchors || []).length}`;
   if (event.event_type === "llm_turn") return `선택: ${(event.tool_names || []).join(" · ") || "자연어 초안"} · ${event.metrics?.client_elapsed_ms || 0}ms`;
   if (event.event_type === "tool_action") return `${event.tool_name} ${JSON.stringify(event.arguments || {})}`;
   if (event.event_type === "observation") return `${event.tool_name} → ${event.status}`;
@@ -74,6 +78,8 @@ function summarizeEvent(event) {
   if (event.event_type === "candidate_structured") return `JSON schema adapter · attempt ${event.adapter_attempt || 1}`;
   if (event.event_type === "action_structured") return `${event.tool_name} · JSON schema action adapter`;
   if (event.event_type === "candidate_evidence_repaired") return `${(event.added_evidence_ids || []).join(" · ")} 추가`;
+  if (event.event_type === "candidate_evidence_normalized") return `${(event.replacements || []).map((item) => `${item.from} → ${item.to}`).join(" · ")}`;
+  if (event.event_type === "repeated_verification_blocked") return `동일 오류 ${event.occurrences}회 · 스킬 재실행 금지`;
   if (event.event_type === "model_error") return `${event.error_type}: ${event.error_message}`;
   if (event.event_type === "agent_completed") return `${event.status} · ${event.stop_reason}`;
   return event.reason || "실행 상태가 기록되었습니다.";
@@ -84,7 +90,7 @@ function addTrace(event) {
   if (placeholder) placeholder.remove();
   const [title, fallback] = eventLabels[event.event_type] || [event.event_type, ""];
   const item = document.createElement("li");
-  item.className = `trace-item ${["tool_action", "action_structured"].includes(event.event_type) ? "action" : ""} ${["verification", "candidate_evidence_repaired"].includes(event.event_type) ? "verify" : ""} ${event.event_type === "model_error" ? "error" : ""}`;
+  item.className = `trace-item ${["tool_action", "action_structured"].includes(event.event_type) ? "action" : ""} ${["verification", "candidate_evidence_repaired", "candidate_evidence_normalized", "repeated_verification_blocked"].includes(event.event_type) ? "verify" : ""} ${event.event_type === "model_error" ? "error" : ""}`;
   const strong = document.createElement("strong");
   strong.textContent = `${String(event.sequence || "").padStart(2, "0")} · ${title}`;
   const detail = document.createElement("p");

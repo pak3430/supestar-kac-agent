@@ -130,7 +130,7 @@
       <h1>실제 코드가 무엇을 받고,<br>무엇을 만들고, 어디로 넘기는가</h1>
       <p class="hero-copy">이 페이지는 개념도가 아니라 현재 서버의 실행 순서를 요소 단위로 풀어 쓴 상세도입니다. 각 요소마다 입력, 처리, 생성물, 다음 단계를 표시했으며 Local Qwen의 판단과 Python Runtime의 결정도 구분했습니다.</p>
       <div class="legend"><span class="l-system">PYTHON / SYSTEM</span><span class="l-qwen">LOCAL QWEN</span><span class="l-skill">KAC SKILL</span><span class="l-verify">VERIFIER</span><span class="l-store">AUDIT STORAGE</span></div>
-      <nav class="jump"><a href="#verdicts">세 판정 구분</a><a href="#phase-a">요청·초기화</a><a href="#phase-b">Agent 문맥</a><a href="#phase-c">행동 Loop</a><a href="#phase-d">스킬 내부</a><a href="#phase-e">검증·공개</a><a href="#actual-run">실제 23개 이벤트</a></nav>
+      <nav class="jump"><a href="#verdicts">세 판정 구분</a><a href="#phase-a">요청·초기화</a><a href="#phase-b">Agent 문맥</a><a href="#phase-c">행동 Loop</a><a href="#phase-d">스킬 내부</a><a href="#phase-e">검증·공개</a><a href="#actual-run">실제 29개 이벤트</a></nav>
     </section>
 
     <section id="verdicts" class="card verdict-card">
@@ -169,8 +169,8 @@
       <summary><div class="phase-name"><span class="phase-number">C</span><div><h2>행동–Observation Loop</h2><p>Qwen의 선택을 실제 도구 실행으로 바꾸고 그 결과를 다시 Qwen에 돌려주는 구간</p></div></div></summary>
       <div class="phase-body">
         <div class="element-list">
-          <article class="element qwen"><div class="e-index">11</div><div class="e-name"><small>RECOVERY ADAPTER</small><strong>자연어 이탈 복구</strong><code>ollama_client.py · select_tool_action()</code></div><div class="e-body"><div class="fact"><b>조건</b><p>Qwen이 필요한 tool call 없이 자연어만 반환</p></div><div class="fact"><b>처리</b><p>같은 Local Qwen에 현재 lifecycle에서 허용된 도구만 JSON schema로 제시</p></div><div class="fact"><b>Qwen 선택</b><p>구체 concept·skill·inputs는 여전히 모델이 정합니다.</p></div><div class="fact"><b>경계</b><p>질문별 route map이나 하드코딩된 스킬 선택이 아닙니다.</p></div></div></article>
-          <article class="element"><div class="e-index">12</div><div class="e-name"><small>TOOL ACTION</small><strong>행동 기록·예산 검사</strong><code>agent.py · tool loop</code></div><div class="e-body"><div class="fact"><b>INPUT</b><p><code>tool_name + arguments</code></p></div><div class="fact"><b>처리</b><p>action hash를 만들고 누적 도구 수를 검사합니다.</p></div><div class="fact"><b>OUTPUT</b><p><code>tool_action</code> event</p></div><div class="fact"><b>실패</b><p>16회를 넘으면 <code>TOOL_CALL_BUDGET_EXCEEDED</code></p></div></div></article>
+          <article class="element qwen"><div class="e-index">11</div><div class="e-name"><small>LIFECYCLE GATE + RECOVERY</small><strong>증거 단계 제한·자연어 이탈 복구</strong><code>agent.py · _lifecycle_gate()</code></div><div class="e-body"><div class="fact"><b>단계</b><p>필수 anchor 관찰 → 관계 연결 → KAC Skill 실행 → 후보 제출</p></div><div class="fact"><b>처리</b><p>완료된 단계의 도구를 닫고 현재 단계 도구만 JSON schema로 제시</p></div><div class="fact"><b>Qwen 선택</b><p>남은 concept, 관계 방향, skill과 inputs는 모델이 정합니다.</p></div><div class="fact"><b>경계</b><p>질문별 정답 route가 아니라 모든 질문에 같은 증거 완료조건을 적용합니다.</p></div></div></article>
+          <article class="element"><div class="e-index">12</div><div class="e-name"><small>TOOL ACTION</small><strong>행동 기록·예산·허용 ID 검사</strong><code>agent.py · tool loop</code></div><div class="e-body"><div class="fact"><b>INPUT</b><p><code>tool_name + arguments</code></p></div><div class="fact"><b>처리</b><p>action hash와 누적 도구 수를 검사합니다.</p></div><div class="fact"><b>제출 제한</b><p>claim은 현재 관찰된 evidence ID enum에서만 선택</p></div><div class="fact"><b>실패</b><p>16회를 넘으면 <code>TOOL_CALL_BUDGET_EXCEEDED</code></p></div></div></article>
         </div>
         <div class="tool-grid">
           <article class="tool"><code>observe_concept</code><p>alias를 node id로 해석하고 정의·경계·출처·적용 가능 스킬을 Observation으로 만듭니다.</p></article>
@@ -180,8 +180,8 @@
           <article class="tool"><code>submit_answer_candidate</code><p>답변 초안과 claim별 evidence ID를 Verifier에 제출합니다. 바로 공개되지는 않습니다.</p></article>
         </div>
         <div class="element-list" style="margin-top:9px">
-          <article class="element"><div class="e-index">13</div><div class="e-name"><small>OBSERVATION</small><strong>실행 결과를 증거로 등록</strong><code>agent_tools.py · execute()</code></div><div class="e-body"><div class="fact"><b>INPUT</b><p>각 도구의 실행 결과</p></div><div class="fact"><b>처리</b><p><code>concept:</code>, <code>edge:</code>, <code>skill:</code> evidence ID로 환경에 저장</p></div><div class="fact"><b>OUTPUT</b><p>상태·출처·observation hash를 가진 event</p></div><div class="fact"><b>다음</b><p>tool message로 Qwen의 다음 turn에 전달</p></div></div></article>
-          <article class="element qwen"><div class="e-index">14</div><div class="e-name"><small>LOOP</small><strong>Qwen이 다음 행동 재선택</strong><code>agent.py · for step in 1..10</code></div><div class="e-body"><div class="fact"><b>INPUT</b><p>이전 질문 + 모든 action/Observation</p></div><div class="fact"><b>처리</b><p>관찰을 보고 추가 개념·관계·스킬·제출 중 다음 행동 선택</p></div><div class="fact"><b>종료</b><p>검증 PASS 또는 단계·도구 예산 소진</p></div><div class="fact"><b>속도</b><p>이 순차 Qwen 호출이 현재 응답 지연의 대부분입니다.</p></div></div></article>
+          <article class="element"><div class="e-index">13</div><div class="e-name"><small>OBSERVATION</small><strong>실행 결과를 증거로 등록</strong><code>agent_tools.py · execute()</code></div><div class="e-body"><div class="fact"><b>INPUT</b><p>각 도구의 실행 결과</p></div><div class="fact"><b>처리</b><p><code>concept:</code>, <code>edge:</code>, <code>skill:</code> evidence ID로 환경에 저장</p></div><div class="fact"><b>중복</b><p>같은 concept·relation·skill+input은 기존 Observation 또는 SkillRun 재사용</p></div><div class="fact"><b>다음</b><p>tool message로 Qwen의 다음 turn에 전달</p></div></div></article>
+          <article class="element qwen"><div class="e-index">14</div><div class="e-name"><small>LOOP</small><strong>Qwen이 현재 단계 안에서 행동 선택</strong><code>agent.py · for step in 1..10</code></div><div class="e-body"><div class="fact"><b>INPUT</b><p>질문 + action/Observation + 현재 lifecycle gate</p></div><div class="fact"><b>처리</b><p>남은 필수 anchor나 관계, 스킬 입력, 제출 claim을 모델이 선택</p></div><div class="fact"><b>종료</b><p>검증 PASS 또는 단계·도구 예산 소진</p></div><div class="fact"><b>효과</b><p>완료된 관찰로 되돌아가는 반복을 막아 단계 예산을 보존합니다.</p></div></div></article>
         </div>
       </div>
     </details>
@@ -190,7 +190,7 @@
       <summary><div class="phase-name"><span class="phase-number">D</span><div><h2>KAC 원자 스킬 하나의 실제 내부</h2><p>“스킬 파일이 있다”가 아니라 Runtime 코드가 실행되고 증거가 만들어지는 구간</p></div></div></summary>
       <div class="phase-body"><div class="element-list">
         <article class="element skill"><div class="e-index">15</div><div class="e-name"><small>SEVEN-NODE CONTRACT</small><strong>스킬의 구조적 정체성</strong><code>skills/atomic/&lt;skill&gt;/</code></div><div class="e-body"><div class="fact"><b>CHAIN</b><p>Identity → Goal → Task → Knowledge → Method → Skill → Runtime</p></div><div class="fact"><b>역할</b><p>무엇이며, 왜 하고, 무엇을 알고, 어떤 규칙으로 실행하는지 보존</p></div><div class="fact"><b>연결</b><p>각 node의 <code>derived_from</code>이 앞 node를 가리킵니다.</p></div><div class="fact"><b>출처</b><p>Knowledge의 source ref는 검증된 registry 항목만 허용</p></div></div></article>
-        <article class="element skill"><div class="e-index">16</div><div class="e-name"><small>SKILL EXECUTION</small><strong>계약 입력 검사·handler 실행</strong><code>skill_runtime.py · execute_skill()</code></div><div class="e-body"><div class="fact"><b>INPUT</b><p>Qwen이 만든 <code>skill_name + inputs</code></p></div><div class="fact"><b>검사</b><p>등록 스킬인지, 필수 입력이 있는지, handler가 설치됐는지 확인</p></div><div class="fact"><b>실행</b><p><code>skill_handlers.py</code>의 도메인 규칙을 Python으로 실행</p></div><div class="fact"><b>OUTPUT</b><p>answer·판정·missing evidence·rule trace</p></div></div></article>
+        <article class="element skill"><div class="e-index">16</div><div class="e-name"><small>SKILL EXECUTION</small><strong>계약 입력 검사·handler 실행</strong><code>skill_runtime.py · execute_skill()</code></div><div class="e-body"><div class="fact"><b>INPUT</b><p>Qwen이 만든 <code>skill_name + inputs</code></p></div><div class="fact"><b>중복 검사</b><p>동일 스킬+동일 입력은 기존 SkillRun을 재사용</p></div><div class="fact"><b>실행</b><p>최초 입력만 <code>skill_handlers.py</code>의 도메인 규칙 실행</p></div><div class="fact"><b>OUTPUT</b><p>answer·판정·missing evidence·rule trace</p></div></div></article>
         <article class="element skill"><div class="e-index">17</div><div class="e-name"><small>DOMAIN VERDICT</small><strong>업무 판정 생성</strong><code>skill_handlers.py</code></div><div class="e-body"><div class="fact"><b>PROCEED</b><p>계약 입력 안에서 단일 후보나 행동 경로가 성립</p></div><div class="fact"><b>REVIEW</b><p>근거 부족·충돌·다음 단계 확인 필요</p></div><div class="fact"><b>STOP</b><p>이중사용·근거 없는 확정·실제 거래 등 금지 조건</p></div><div class="fact"><b>주의</b><p>사회적 Outcome 발생이나 공식 승인이라는 뜻은 아닙니다.</p></div></div></article>
         <article class="element store"><div class="e-index">18</div><div class="e-name"><small>KAC SKILL RUN</small><strong>실행 증거 객체 생성</strong><code>runs/&lt;run&gt;/skills/*.json</code></div><div class="e-body"><div class="fact"><b>포함</b><p>chain fingerprint, 입력·출력 snapshot/hash, handler origin</p></div><div class="fact"><b>ID</b><p>고유 <code>skill:skill-run-&lt;uuid&gt;</code></p></div><div class="fact"><b>안정 ID</b><p><code>skill:&lt;skill-name&gt;:latest</code></p></div><div class="fact"><b>외부 행동</b><p><code>external_actions=[]</code>로 기록</p></div></div></article>
       </div></div>
@@ -210,7 +210,7 @@
           <div class="check"><b>10.</b> CCM/Scope·VCM/Scope 혼동 차단</div><div class="check"><b>11.</b> 탄소크레딧=배출권 혼동 차단</div><div class="check"><b>12.</b> 검증 결과와 source ref 목록 생성</div>
         </div>
         <div class="element-list" style="margin-top:9px">
-          <article class="element verify"><div class="e-index">21</div><div class="e-name"><small>LIMITED REPAIR</small><strong>관찰 근거 ID만 보완</strong><code>agent.py · _repair_observed_concept_citations()</code></div><div class="e-body"><div class="fact"><b>조건</b><p>문장은 맞고 이미 관찰한 concept ID만 누락</p></div><div class="fact"><b>처리</b><p>Verifier가 지정한 <code>concept:*</code> ID만 claim에 추가</p></div><div class="fact"><b>금지</b><p>문장·판정·미관찰 지식·잘못된 주장 자동 수정 안 함</p></div><div class="fact"><b>다음</b><p>같은 candidate를 다시 검증</p></div></div></article>
+          <article class="element verify"><div class="e-index">21</div><div class="e-name"><small>LIMITED REPAIR</small><strong>Skill ID 정규화·관찰 근거 보완</strong><code>agent.py · evidence repair</code></div><div class="e-body"><div class="fact"><b>ID 정규화</b><p>실행 ID가 정확히 일치할 때 누락된 <code>skill:</code>만 추가</p></div><div class="fact"><b>개념 보완</b><p>문장이 맞을 때 Verifier가 지정한 관찰 <code>concept:*</code>만 추가</p></div><div class="fact"><b>반복 차단</b><p>같은 인용 오류에서는 스킬 재실행 없이 재제출만 허용</p></div><div class="fact"><b>금지</b><p>문장·판정·미관찰 지식은 자동 수정하지 않음</p></div></div></article>
           <article class="element store"><div class="e-index">22</div><div class="e-name"><small>FINAL PACKAGE</small><strong>답변 공개 또는 차단</strong><code>run_manifest.json</code></div><div class="e-body"><div class="fact"><b>PASS</b><p>검증된 claim text만 이어 붙인 답변 공개</p></div><div class="fact"><b>STOP</b><p><code>answer=null</code>, 실행·실패 증거는 보존</p></div><div class="fact"><b>포함</b><p>model identity, skill IDs, sources, metrics, locality flags</p></div><div class="fact"><b>주의</b><p>candidate의 자유로운 answer 초안을 그대로 내보내지 않습니다.</p></div></div></article>
           <article class="element store"><div class="e-index">23</div><div class="e-name"><small>STREAM + AUDIT</small><strong>화면 표시·영구 감사 기록</strong><code>events.json + SQLite</code></div><div class="e-body"><div class="fact"><b>STREAM</b><p>각 event를 NDJSON 한 줄로 즉시 브라우저에 전달</p></div><div class="fact"><b>화면</b><p>오른쪽 trace에 행동·Observation·검증 표시</p></div><div class="fact"><b>파일</b><p>request, model, events, SkillRuns, manifest</p></div><div class="fact"><b>SQLite</b><p>지식 검색이 아닌 agent_run·agent_event 감사 저장</p></div></div></article>
         </div>
@@ -218,19 +218,17 @@
     </details>
 
     <section id="actual-run" class="card actual">
-      <div class="actual-head"><div><h2 class="section-title">실제 Scope 2 PASS run에서 벌어진 일</h2><p class="section-copy">성공 장면만 정리하지 않고 잘못된 선택과 복구도 그대로 표시합니다. 전체 기록은 23개 event입니다.</p></div><span class="time-total">Qwen 7회 · 160.3초</span></div>
+      <div class="actual-head"><div><h2 class="section-title">수정 후 실제 보일러 Scope 1 PASS run</h2><p class="section-copy"><code>MAX_STEPS_REACHED</code>가 발생했던 동일 질문을 최종 코드로 다시 실행한 기록입니다. 전체 29개 event와 SkillRun 1개가 보존됐습니다.</p></div><span class="time-total">Qwen 9회 · 260.6초</span></div>
       <div class="trace">
-        <div class="trace-row"><span>EVENT 01</span><b>Agent 시작</b><p>질문에서 <code>OPERATIONAL_BOUNDARY</code> anchor 후보 발견</p><time>—</time></div>
-        <div class="trace-row error"><span>02–05</span><b>첫 이탈</b><p>Qwen이 tool call 없이 답하려 함 → 같은 Qwen 행동 복구가 존재하지 않는 스킬명을 concept로 관찰 → <code>UNKNOWN_CONCEPT</code></p><time>58.6s</time></div>
-        <div class="trace-row error"><span>06–08</span><b>잘못된 확장</b><p>그 이름으로 관계 확장 시도 → 다시 <code>UNKNOWN_CONCEPT</code></p><time>8.6s</time></div>
-        <div class="trace-row"><span>09–11</span><b>스킬 실행</b><p>Qwen이 <code>scope-activity-classification</code>과 구매 전력 입력을 선택 → <code>SCOPE_2 · PROCEED</code></p><time>13.3s</time></div>
-        <div class="trace-row error"><span>12–15</span><b>첫 후보 보류</b><p>Scope 2 문장은 맞지만 운영 경계 concept를 아직 관찰하지 않아 Verifier가 <code>REVIEW</code></p><time>39.1s</time></div>
-        <div class="trace-row"><span>16–18</span><b>근거 보완</b><p>Qwen이 <code>OPERATIONAL_BOUNDARY</code>를 정확히 관찰해 concept evidence 생성</p><time>6.8s</time></div>
-        <div class="trace-row pass"><span>19–23</span><b>재제출·PASS</b><p>SkillRun과 concept evidence를 함께 인용한 claim 제출 → Verifier PASS → 최종 답변 공개</p><time>33.8s</time></div>
+        <div class="trace-row"><span>01–11</span><b>필수 anchor를 각각 1회 관찰</b><p><code>ACTIVITY_DATA</code>와 <code>OPERATIONAL_BOUNDARY</code>를 관찰하고, 완료된 concept는 다음 선택지에서 제거</p><time>107.3s</time></div>
+        <div class="trace-row"><span>12–16</span><b>실제 CCS 관계 연결</b><p>Qwen이 두 anchor를 선택해 최단 관계 경로를 관찰 → <code>anchors_connected=true</code></p><time>49.0s</time></div>
+        <div class="trace-row"><span>17–21</span><b>원자 스킬 1회 실행</b><p><code>scope-activity-classification</code>과 질문 사실 기반 입력 선택 → <code>SCOPE_1 · PROCEED</code></p><time>64.3s</time></div>
+        <div class="trace-row"><span>22–25</span><b>첫 후보 근거 검사</b><p>Scope 1 claim은 맞지만 운영 경계 concept 직접 인용이 빠져 Verifier가 <code>REVIEW</code></p><time>40.0s</time></div>
+        <div class="trace-row pass"><span>26–29</span><b>제한 보완·PASS</b><p>문장과 판정은 바꾸지 않고 이미 관찰된 <code>concept:OPERATIONAL_BOUNDARY</code>만 추가 → 같은 단계에서 공개</p><time>&lt;0.1s</time></div>
       </div>
       <div class="boundary-grid">
-        <article class="boundary"><strong>왜 오래 걸리나요?</strong><p>그래프와 Python 스킬이 느린 것이 아니라, 위 과정에서 14B Local Qwen을 순차적으로 7회 호출했고 prompt가 2,864에서 5,238 token까지 커졌기 때문입니다.</p></article>
-        <article class="boundary"><strong>왜 실패 장면도 남기나요?</strong><p>Agent가 항상 옳다고 꾸미지 않고 어떤 오판을 Observation으로 받고 어떻게 복구했는지 보여주는 것이 실제 실행 증명의 일부이기 때문입니다.</p></article>
+        <article class="boundary"><strong>왜 아직 수 분 걸리나요?</strong><p>그래프와 Python 스킬보다 14B Local Qwen 추론이 지연의 대부분입니다. 이 run은 행동 5단계에서 본 호출 5회와 자연어 이탈 복구 4회, 총 9회 실행됐습니다.</p></article>
+        <article class="boundary"><strong>왜 첫 REVIEW도 남기나요?</strong><p>정답 문장만 보여주지 않고 근거 인용 누락을 Verifier가 차단하고, 허용된 관찰 근거만 보완한 사실까지 실행 증거로 남기기 때문입니다.</p></article>
       </div>
     </section>
 

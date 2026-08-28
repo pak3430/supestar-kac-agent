@@ -160,7 +160,7 @@
         <article class="step model">
           <span class="number">3</span>
           <h3>Local Qwen 행동 선택</h3>
-          <p>현재 관찰 결과를 보고 개념 관찰·관계 확장·스킬 실행 중 다음 행동을 선택합니다.</p>
+          <p>현재 증거 단계에서 허용된 범위 안에서 남은 개념·관계 방향·스킬과 입력을 선택합니다.</p>
           <small>Ollama · qwen2.5 · loopback</small>
         </article>
         <article class="step">
@@ -182,7 +182,7 @@
           <small>submit_answer_candidate → Verifier</small>
         </article>
       </div>
-      <div class="loop"><b>↺</b> 근거가 부족하면 답을 꾸미지 않고 다시 관찰하거나 스킬을 실행합니다.</div>
+      <div class="loop"><b>↺</b> 필수 anchor 관찰 → 관계 연결 → Skill 실행 → 제출 순서로 진행하며, 완료된 관찰과 동일 SkillRun은 재사용합니다.</div>
       <div class="decision">
         <div class="pass"><strong>KAC Skill 판정</strong>PROCEED · REVIEW · STOP</div>
         <div class="review"><strong>Verifier 판정</strong>PASS · REVIEW</div>

@@ -5,10 +5,17 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from supestar_kac_agent.agent import run_agent
+from supestar_kac_agent.agent import (
+    _lifecycle_gate,
+    _normalize_executed_skill_evidence_ids,
+    _repair_observed_concept_citations,
+    run_agent,
+)
+from supestar_kac_agent.agent_tools import ToolEnvironment
 from supestar_kac_agent.graph import KnowledgeGraph
 from supestar_kac_agent.skill_compiler import compile_skills, skill_catalog
 from supestar_kac_agent.skill_runtime import execute_skill
+from supestar_kac_agent.verifier import verify_candidate
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -87,8 +94,8 @@ class StructuredFallbackQwen:
             [
                 tool_call("observe_concept", {"concept": "ESG"}),
                 tool_call("observe_concept", {"concept": "탄소크레딧"}),
-                tool_call("expand_relations", {"concept": "ESG", "toward_concept": "탄소크레딧", "purpose": "관계 관찰"}),
             ],
+            [tool_call("expand_relations", {"concept": "ESG", "toward_concept": "탄소크레딧", "purpose": "관계 관찰"})],
             [tool_call("invoke_kac_skill", {
                 "skill_name": "carbon-market-unit-comparison",
                 "inputs": {"question": "ESG와 탄소크레딧 관계", "purpose": "LEARNING", "asOfDate": "2026-08-27"},
@@ -165,7 +172,264 @@ class ActionRecoveryQwen:
             "metrics": {"phase": "tool_action_recovery", "client_elapsed_ms": 1.0},
         }
 
+
+class CitationLoopQwen:
+    def __init__(self) -> None:
+        self.allowed_tool_history: list[list[str]] = []
+
+    def identity(self) -> dict:
+        return ScriptedLocalQwen().identity()
+
+    def chat(self, messages: list[dict], tools: list[dict]) -> dict:
+        allowed = [item["function"]["name"] for item in tools]
+        self.allowed_tool_history.append(allowed)
+        selected = allowed[0]
+        if selected == "observe_concept":
+            call = tool_call(selected, {"concept":"OPERATIONAL_BOUNDARY"})
+        elif selected == "invoke_kac_skill":
+            call = tool_call(selected, {
+                "skill_name":"scope-activity-classification",
+                "inputs":{
+                    "activity_description":"외부 전력회사에서 구매한 전기를 사무실에서 사용",
+                    "organization_boundary":"회사 조직 경계 안의 사무실",
+                    "source_ownership_or_control":"UNKNOWN",
+                    "purchased_energy_type":"ELECTRICITY",
+                    "value_chain_relation":"UNKNOWN",
+                },
+            })
+        else:
+            call = tool_call("submit_answer_candidate", {
+                "answer":"CCM은 Scope 1입니다.",
+                "claims":[{
+                    "text":"CCM은 Scope 1입니다.",
+                    "evidence_ids":["skill:scope-activity-classification:latest"],
+                }],
+            })
+        return {
+            "message":{"role":"assistant", "content":"", "tool_calls":[call]},
+            "metrics":{"client_elapsed_ms":1.0, "done_reason":"stop"},
+        }
+
+
+class GateViolationQwen:
+    def identity(self) -> dict:
+        return ScriptedLocalQwen().identity()
+
+    def chat(self, messages: list[dict], tools: list[dict]) -> dict:
+        return {
+            "message":{
+                "role":"assistant",
+                "content":"",
+                "tool_calls":[tool_call("invoke_kac_skill", {
+                    "skill_name":"scope-activity-classification",
+                    "inputs":{},
+                })],
+            },
+            "metrics":{"client_elapsed_ms":1.0, "done_reason":"stop"},
+        }
+
 class KACRuntimeTests(unittest.TestCase):
+    def test_tool_outside_current_lifecycle_gate_is_not_executed(self) -> None:
+        request = {
+            "question":"이 배출원은 Scope 몇인가요?",
+            "userRole":"LEARNER",
+            "asOfDate":"2026-08-28",
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            temporary = Path(directory)
+            result = run_agent(
+                request,
+                root=ROOT,
+                runs_root=temporary / "runs",
+                db_path=temporary / "state.sqlite3",
+                client=GateViolationQwen(),
+            )
+            self.assertEqual(result["status"], "STOP")
+            self.assertEqual(result["skill_run_ids"], [])
+            events = json.loads((Path(result["run_directory"]) / "events.json").read_text(encoding="utf-8"))
+            rejected = [
+                item for item in events
+                if item["event_type"] == "observation"
+                and item["status"] == "REJECTED_TOOL_OUTSIDE_LIFECYCLE_GATE"
+            ]
+            self.assertTrue(rejected)
+            self.assertEqual(rejected[0]["observation"]["allowed_tool_names"], ["observe_concept"])
+
+    def test_repeated_citation_error_never_reopens_skill_execution(self) -> None:
+        request = {
+            "question":"외부 전력회사에서 구매한 전기를 사용합니다. 이 활동은 Scope 몇인가요?",
+            "userRole":"LEARNER",
+            "asOfDate":"2026-08-28",
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            temporary = Path(directory)
+            client = CitationLoopQwen()
+            result = run_agent(
+                request,
+                root=ROOT,
+                runs_root=temporary / "runs",
+                db_path=temporary / "state.sqlite3",
+                client=client,
+            )
+            self.assertEqual(result["status"], "STOP")
+            self.assertEqual(len(result["skill_run_ids"]), 1)
+            self.assertEqual(client.allowed_tool_history.count(["invoke_kac_skill"]), 1)
+            skill_gate_index = client.allowed_tool_history.index(["invoke_kac_skill"])
+            self.assertTrue(all(
+                tools == ["submit_answer_candidate"]
+                for tools in client.allowed_tool_history[skill_gate_index + 1:]
+            ))
+            events = json.loads((Path(result["run_directory"]) / "events.json").read_text(encoding="utf-8"))
+            self.assertTrue(any(item["event_type"] == "repeated_verification_blocked" for item in events))
+
+    def test_observed_concept_repair_can_resolve_its_grounding_overlap_consequence(self) -> None:
+        candidate = {
+            "answer":"Scope 1입니다.",
+            "claims":[{
+                "text":"소유하고 통제하는 사업장의 직접 연소이므로 Scope 1입니다.",
+                "evidence_ids":["skill:scope-activity-classification:latest"],
+            }],
+        }
+        repaired = _repair_observed_concept_citations(candidate, {
+            "missing_requirements":[
+                "claim_grounding_overlap:0",
+                "claim_uncovered_concept:0:OPERATIONAL_BOUNDARY",
+            ],
+            "unsupported_evidence_ids":[],
+            "forbidden_confusions":[],
+            "repair_evidence_by_concept":{
+                "OPERATIONAL_BOUNDARY":["concept:OPERATIONAL_BOUNDARY"],
+            },
+        })
+        self.assertIsNotNone(repaired)
+        self.assertEqual(repaired["claims"][0]["evidence_ids"], [
+            "skill:scope-activity-classification:latest",
+            "concept:OPERATIONAL_BOUNDARY",
+        ])
+
+    def test_lifecycle_gate_advances_without_reopening_completed_stages(self) -> None:
+        graph = KnowledgeGraph(ROOT)
+        anchors = ["OPERATIONAL_BOUNDARY", "ACTIVITY_DATA"]
+        with tempfile.TemporaryDirectory() as directory:
+            environment = ToolEnvironment(root=ROOT, run_dir=Path(directory))
+            gate, definitions, state = _lifecycle_gate(environment, anchors, graph)
+            self.assertEqual(gate, "OBSERVE_REQUIRED_ANCHORS")
+            self.assertEqual(definitions[0]["function"]["name"], "observe_concept")
+            initial_choices = definitions[0]["function"]["parameters"]["properties"]["concept"]["enum"]
+            self.assertEqual({graph.resolve(choice) for choice in initial_choices}, set(anchors))
+            environment.execute("observe_concept", {"concept":"OPERATIONAL_BOUNDARY"})
+            gate, definitions, state = _lifecycle_gate(environment, anchors, graph)
+            self.assertEqual(gate, "OBSERVE_REQUIRED_ANCHORS")
+            remaining_choices = definitions[0]["function"]["parameters"]["properties"]["concept"]["enum"]
+            self.assertEqual({graph.resolve(choice) for choice in remaining_choices}, {"ACTIVITY_DATA"})
+            environment.execute("observe_concept", {"concept":"ACTIVITY_DATA"})
+            gate, definitions, state = _lifecycle_gate(environment, anchors, graph)
+            self.assertEqual(gate, "CONNECT_OBSERVED_ANCHORS")
+            self.assertEqual(definitions[0]["function"]["name"], "expand_relations")
+            environment.execute("expand_relations", {
+                "concept":"OPERATIONAL_BOUNDARY",
+                "toward_concept":"ACTIVITY_DATA",
+                "purpose":"필수 anchor 연결",
+            })
+            gate, definitions, state = _lifecycle_gate(environment, anchors, graph)
+            self.assertEqual(gate, "EXECUTE_KAC_SKILL")
+            self.assertEqual(definitions[0]["function"]["name"], "invoke_kac_skill")
+
+    def test_duplicate_concept_and_relation_observations_are_reused(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            environment = ToolEnvironment(root=ROOT, run_dir=Path(directory))
+            first_concept = environment.execute("observe_concept", {"concept":"ESG"})
+            second_concept = environment.execute("observe_concept", {"concept":"ESG"})
+            self.assertEqual(first_concept["status"], "OBSERVED")
+            self.assertEqual(second_concept["status"], "REUSED_EXISTING_CONCEPT_OBSERVATION")
+            arguments = {"concept":"ESG", "toward_concept":"CARBON_CREDIT", "purpose":"관계 관찰"}
+            first_relation = environment.execute("expand_relations", arguments)
+            evidence_after_first = set(environment.evidence)
+            second_relation = environment.execute("expand_relations", arguments)
+            self.assertEqual(first_relation["status"], "EXPANDED")
+            self.assertEqual(second_relation["status"], "REUSED_EXISTING_RELATION_EXPANSION")
+            self.assertEqual(set(environment.evidence), evidence_after_first)
+
+    def test_natural_korean_scope_claim_is_grounded_by_skill_input_and_observed_concept(self) -> None:
+        graph = KnowledgeGraph(ROOT)
+        anchors = ["OPERATIONAL_BOUNDARY", "ACTIVITY_DATA"]
+        with tempfile.TemporaryDirectory() as directory:
+            environment = ToolEnvironment(root=ROOT, run_dir=Path(directory))
+            for concept in anchors:
+                environment.execute("observe_concept", {"concept":concept})
+            environment.execute("expand_relations", {
+                "concept":"OPERATIONAL_BOUNDARY",
+                "toward_concept":"ACTIVITY_DATA",
+                "purpose":"Scope 판정 근거 연결",
+            })
+            environment.execute("invoke_kac_skill", {
+                "skill_name":"scope-activity-classification",
+                "inputs":{
+                    "activity_description":"우리 회사가 소유하고 직접 운영·통제하는 사업장 보일러에서 도시가스를 연소합니다.",
+                    "organization_boundary":"OWNED_CONTROLLED",
+                    "source_ownership_or_control":"OWNED_CONTROLLED",
+                    "purchased_energy_type":"NONE",
+                    "value_chain_relation":"NONE",
+                },
+            })
+            candidate = {
+                "answer":"Scope 1입니다.",
+                "claims":[{
+                    "text":"배출원이 우리 회사의 소유와 통제하에 있으며 직접 연소한 도시가스이므로 Scope 1으로 분류됩니다.",
+                    "evidence_ids":[
+                        "skill:scope-activity-classification:latest",
+                        "concept:OPERATIONAL_BOUNDARY",
+                    ],
+                }],
+            }
+            verification = verify_candidate(
+                candidate,
+                anchors=anchors,
+                evidence=environment.evidence,
+                skill_runs=environment.skill_runs,
+                graph=graph,
+            )
+            self.assertEqual(verification["verdict"], "PASS")
+
+    def test_missing_skill_namespace_is_normalized_only_for_exact_observed_run(self) -> None:
+        evidence = {
+            "skill:skill-run-exact": {"skill_run_id":"skill-run-exact"},
+            "concept:ESG": {"evidence_id":"concept:ESG"},
+        }
+        candidate, replacements = _normalize_executed_skill_evidence_ids({
+            "answer":"답변",
+            "claims":[{"text":"검증 문장입니다.","evidence_ids":["skill-run-exact","skill-run-unknown","concept:ESG"]}],
+        }, evidence)
+        self.assertEqual(candidate["claims"][0]["evidence_ids"], [
+            "skill:skill-run-exact", "skill-run-unknown", "concept:ESG",
+        ])
+        self.assertEqual(replacements, [{"from":"skill-run-exact","to":"skill:skill-run-exact"}])
+
+    def test_submit_schema_uses_observed_evidence_enum_and_duplicate_skill_is_reused(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            environment = ToolEnvironment(root=ROOT, run_dir=Path(directory))
+            environment.execute("observe_concept", {"concept":"OPERATIONAL_BOUNDARY"})
+            inputs = {
+                "activity_description":"소유 사업장 보일러 도시가스 연소",
+                "organization_boundary":"회사 경계",
+                "source_ownership_or_control":"OWNED_CONTROLLED",
+                "purchased_energy_type":"NONE",
+                "value_chain_relation":"NONE",
+            }
+            first = environment.execute("invoke_kac_skill", {
+                "skill_name":"scope-activity-classification", "inputs":inputs,
+            })
+            second = environment.execute("invoke_kac_skill", {
+                "skill_name":"scope-activity-classification", "inputs":inputs,
+            })
+            self.assertEqual(first["status"], "EXECUTED")
+            self.assertEqual(second["status"], "REUSED_EXISTING_SKILL_RUN")
+            self.assertEqual(len(environment.skill_runs), 1)
+            self.assertEqual(len(list((Path(directory) / "skills").glob("*.json"))), 1)
+            submit = next(item for item in environment.definitions() if item["function"]["name"] == "submit_answer_candidate")
+            enum = submit["function"]["parameters"]["properties"]["claims"]["items"]["properties"]["evidence_ids"]["items"]["enum"]
+            self.assertEqual(enum, sorted(environment.evidence))
+
     def test_graph_is_source_linked_and_resolves_relation_path(self) -> None:
         graph = KnowledgeGraph(ROOT)
         self.assertEqual(graph.resolve("탄소크레딧"), "CARBON_CREDIT")

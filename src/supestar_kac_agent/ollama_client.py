@@ -179,11 +179,14 @@ class OllamaClient:
         tool_names = [item["function"]["name"] for item in allowed_tools]
         if not tool_names:
             raise ValueError("at least one recovery tool is required")
+        arguments_schema: dict[str, Any] = {"type":"object"}
+        if len(allowed_tools) == 1:
+            arguments_schema = allowed_tools[0]["function"]["parameters"]
         schema = {
             "type": "object",
             "properties": {
                 "tool_name": {"type": "string", "enum": tool_names},
-                "arguments": {"type": "object"},
+                "arguments": arguments_schema,
             },
             "required": ["tool_name", "arguments"],
         }
