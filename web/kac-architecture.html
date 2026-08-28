@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="수페스타 KAC Agent의 실제 시스템 아키텍처 구조도">
+  <title>수페스타 KAC Agent 아키텍처</title>
+  <style>
+    :root {
+      --ink:#16231c; --muted:#647169; --forest:#174d34; --forest-2:#23734d;
+      --lime:#d8ed7a; --paper:#f7faf6; --white:#fff; --line:#d3dfd5;
+      --blue:#2f6e91; --blue-bg:#edf7fc; --gold:#906716; --gold-bg:#fff8de;
+      --purple:#6e5592; --purple-bg:#f5f0fb; --red:#9a403d; --red-bg:#fff1ef;
+      --shadow:0 20px 52px rgba(25,64,42,.10);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;color:var(--ink);background:radial-gradient(circle at 10% 0,rgba(216,237,122,.28),transparent 30rem),linear-gradient(180deg,#f9fcf8,#edf4ee);font-family:Pretendard,"Noto Sans KR",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    a{color:inherit}.page{width:min(1320px,calc(100% - 36px));margin:auto;padding:28px 0 56px}
+    .topbar{display:flex;align-items:center;justify-content:space-between;gap:16px}.brand{display:flex;align-items:center;gap:10px;text-decoration:none;font-weight:900}.mark{display:grid;width:38px;height:38px;place-items:center;border-radius:13px;background:#123b29;color:var(--lime);font-size:23px}.nav{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}.nav a{padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.78);color:var(--forest);font-size:11px;font-weight:850;text-decoration:none}
+    .hero{padding:58px 0 30px;max-width:960px}.eyebrow{margin:0;color:var(--forest-2);font-size:11px;font-weight:950;letter-spacing:.16em}.hero h1{margin:12px 0 15px;font-size:clamp(38px,5vw,64px);line-height:1.06;letter-spacing:-.055em}.hero>p:last-child{max-width:870px;margin:0;color:var(--muted);font-size:16px;line-height:1.72;word-break:keep-all}
+    .legend{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0}.legend span{display:flex;align-items:center;gap:6px;padding:7px 10px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.82);font-size:10px;font-weight:850}.dot{width:9px;height:9px;border-radius:3px}.dot.model{background:var(--blue)}.dot.control{background:var(--forest-2)}.dot.asset{background:#d2a536}.dot.verify{background:var(--purple)}.dot.audit{background:#7e8b84}
+    .card{border:1px solid rgba(190,207,193,.92);border-radius:25px;background:rgba(255,255,255,.92);box-shadow:var(--shadow)}
+    .architecture{padding:24px}.arch-head{display:flex;align-items:end;justify-content:space-between;gap:18px;margin-bottom:20px}.arch-head h2{margin:0;font-size:22px;letter-spacing:-.035em}.arch-head p{margin:0;color:var(--muted);font-size:10px}
+    .zone{position:relative;display:grid;grid-template-columns:150px 1fr;gap:16px;padding:16px 0;border-top:1px dashed #c8d6cb}.zone:first-of-type{border-top:0;padding-top:0}.zone-label{padding:12px 13px;border-radius:15px;background:#eef4ef;align-self:stretch}.zone-label small{display:block;color:var(--muted);font-size:8px;font-weight:900;letter-spacing:.1em}.zone-label strong{display:block;margin-top:5px;color:var(--forest);font-size:13px;line-height:1.35}.zone-body{display:grid;gap:12px;align-items:stretch}.zone.user .zone-body{grid-template-columns:1fr 54px 1fr}.zone.decision .zone-body{grid-template-columns:1fr 58px 1.15fr 58px 1fr}.zone.execution .zone-body{grid-template-columns:1fr 54px 1fr 54px 1fr}.zone.output .zone-body{grid-template-columns:1fr 54px 1fr 54px 1fr}
+    .box{position:relative;min-height:118px;padding:16px;border:1px solid var(--line);border-radius:17px;background:var(--paper)}.box small{display:block;color:var(--muted);font-size:8px;font-weight:900;letter-spacing:.1em}.box h3{margin:7px 0 6px;font-size:14px;letter-spacing:-.025em}.box p{margin:0;color:var(--muted);font-size:10px;line-height:1.5;word-break:keep-all}.box code{display:block;margin-top:9px;color:var(--forest);font:700 8.5px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;overflow-wrap:anywhere}.box.model{border-color:#96bdd1;background:var(--blue-bg)}.box.model h3,.box.model code{color:var(--blue)}.box.control{border-color:#8fb39b;background:#f0f7f2}.box.asset{border-color:#dfca7e;background:var(--gold-bg)}.box.asset h3,.box.asset code{color:var(--gold)}.box.verify{border-color:#b6a3d0;background:var(--purple-bg)}.box.verify h3,.box.verify code{color:var(--purple)}.box.audit{background:#f2f5f3}
+    .arrow{display:grid;place-items:center;color:#869990;font-size:25px;font-weight:900}.arrow.two{grid-template-rows:1fr 1fr;font-size:18px}.arrow.two span:last-child{transform:rotate(180deg)}
+    .feedback{grid-column:1/-1;display:flex;align-items:center;justify-content:center;gap:9px;margin-top:-2px;padding:8px 12px;border-radius:11px;background:#edf4ef;color:var(--forest);font-size:9px;font-weight:850}.feedback b{font-size:15px;color:var(--blue)}
+    .guardrail{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-top:14px}.guardrail div{padding:11px;border-radius:13px;background:#f5f8f5;border:1px solid #e1e9e2}.guardrail strong{display:block;font-size:10px}.guardrail p{margin:3px 0 0;color:var(--muted);font-size:9px;line-height:1.45}
+    .sequence{margin-top:16px;padding:24px}.sequence h2{margin:0 0 6px;font-size:20px;letter-spacing:-.03em}.sequence>p{margin:0 0 17px;color:var(--muted);font-size:10px}.seq-flow{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:18px}.seq{position:relative;padding:13px;border-radius:14px;background:#f4f8f4;border:1px solid var(--line);min-height:100px}.seq::after{content:"→";position:absolute;right:-15px;top:44%;color:#8ba096;font-weight:900}.seq:last-child::after{display:none}.seq span{display:grid;width:22px;height:22px;place-items:center;border-radius:7px;background:var(--forest);color:var(--lime);font-size:9px;font-weight:900}.seq b{display:block;margin:8px 0 4px;font-size:10px}.seq p{margin:0;color:var(--muted);font-size:8.5px;line-height:1.45}.seq.loop-step{background:var(--blue-bg);border-color:#a6c6d7}.seq.skill-step{background:var(--gold-bg);border-color:#dfca7e}.seq.verify-step{background:var(--purple-bg);border-color:#b6a3d0}
+    .truth-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}.truth{padding:22px}.truth h2{margin:0 0 13px;font-size:18px}.truth-list{display:grid;gap:8px}.truth-item{display:grid;grid-template-columns:25px 1fr;gap:9px;padding:10px;border-radius:12px;background:#f5f8f5}.truth-item b{display:grid;width:25px;height:25px;place-items:center;border-radius:8px;background:#e3f0e5;color:var(--forest);font-size:11px}.truth-item.no b{background:var(--red-bg);color:var(--red)}.truth-item strong{display:block;font-size:10px}.truth-item p{margin:2px 0 0;color:var(--muted);font-size:9px;line-height:1.45}.footer{margin:16px 2px 0;color:var(--muted);font-size:9px;line-height:1.5}
+    @media(max-width:1000px){.zone{grid-template-columns:1fr}.zone.user .zone-body,.zone.decision .zone-body,.zone.execution .zone-body,.zone.output .zone-body{grid-template-columns:1fr}.arrow{height:25px}.arrow,.arrow.two span{transform:rotate(90deg)}.arrow.two{display:flex;justify-content:center;gap:8px}.feedback{grid-column:1}.guardrail{grid-template-columns:1fr 1fr}.seq-flow{grid-template-columns:1fr;gap:8px}.seq::after{content:"↓";right:50%;top:auto;bottom:-16px;transform:translateX(50%)}.truth-grid{grid-template-columns:1fr}}
+    @media(max-width:620px){.page{width:min(100% - 22px,1320px)}.hero{padding-top:40px}.architecture,.sequence,.truth{padding:17px}.arch-head{display:block}.arch-head p{margin-top:6px}.guardrail{grid-template-columns:1fr}.nav a:first-child{display:none}}
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="topbar">
+      <a class="brand" href="/"><span class="mark">⌁</span><span>수페스타 KAC Agent</span></a>
+      <nav class="nav"><a href="/runtime-visual.html">작동 구조</a><a href="/runtime-deep-dive.html">요소별 상세</a><a href="/">← 챗봇</a></nav>
+    </header>
+
+    <section class="hero">
+      <p class="eyebrow">SYSTEM ARCHITECTURE · IMPLEMENTED</p>
+      <h1>수페스타 KAC Agent<br>아키텍처 구조도</h1>
+      <p>아래 구조는 구상도가 아니라 현재 실행 코드의 책임과 데이터 흐름입니다. Local Qwen은 다음 행동을 선택하고, CCS는 관찰 가능한 지식을 제공하며, KAC Runtime은 스킬을 실행하고, Verifier는 근거가 닫힌 답변만 공개합니다.</p>
+      <div class="legend"><span><i class="dot model"></i>Local Qwen 판단</span><span><i class="dot control"></i>결정론적 제어</span><span><i class="dot asset"></i>CCS·KAC 자산</span><span><i class="dot verify"></i>검증 경계</span><span><i class="dot audit"></i>감사 기록</span></div>
+    </section>
+
+    <section class="card architecture">
+      <div class="arch-head"><h2>컴포넌트와 데이터 흐름</h2><p>실선 방향은 실제 요청·Action·Observation·산출물의 이동입니다.</p></div>
+
+      <div class="zone user">
+        <div class="zone-label"><small>ENTRY LAYER</small><strong>사용자·인터페이스</strong></div>
+        <div class="zone-body">
+          <article class="box"><small>INPUT</small><h3>사용자 질문</h3><p>질문 원문, 사용자 역할, 기준일을 매 요청마다 독립된 봉투로 만듭니다.</p><code>question · userRole · asOfDate</code></article>
+          <div class="arrow">→</div>
+          <article class="box control"><small>LOCAL APPLICATION</small><h3>Web UI · HTTP Server · CLI</h3><p>질문을 검사하고 새 run을 생성하며 NDJSON 실행 이벤트를 화면에 전달합니다.</p><code>server.py · cli.py · app.js</code></article>
+        </div>
+      </div>
+
+      <div class="zone decision">
+        <div class="zone-label"><small>DECISION LAYER</small><strong>행동 선택·통제</strong></div>
+        <div class="zone-body">
+          <article class="box model"><small>LOOPBACK 127.0.0.1:11434</small><h3>Local Qwen</h3><p>현재 Observation과 허용된 도구만 보고 edge 하나, backtrack, 종료, Skill과 입력을 선택합니다.</p><code>qwen2.5:14b-instruct-q4_K_M</code></article>
+          <div class="arrow two"><span>→</span><span>→</span></div>
+          <article class="box control"><small>CONTROL PLANE</small><h3>Agent Orchestrator + Lifecycle Gate</h3><p>Anchor 관찰 → 1-hop 탐색 → Skill 실행 → 제출 순서와 실행 예산을 관리합니다. 정답 경로는 선택하지 않습니다.</p><code>agent.py · policy.py</code></article>
+          <div class="arrow">→</div>
+          <article class="box control"><small>TOOL CONTRACT</small><h3>Agent Tool Registry</h3><p>현재 단계에서 실행 가능한 도구와 정확한 인자 enum을 Qwen에 제공합니다.</p><code>agent_tools.py</code></article>
+          <div class="feedback"><b>↺</b> Qwen Action → Tool 실행 → Observation → 다음 Qwen 판단</div>
+        </div>
+      </div>
+
+      <div class="zone execution">
+        <div class="zone-label"><small>KNOWLEDGE + ACTION</small><strong>지식 관찰·스킬 실행</strong></div>
+        <div class="zone-body">
+          <article class="box asset"><small>KNOWLEDGE ENVIRONMENT</small><h3>CCS Knowledge Graph</h3><p>ESG·SDGs·Scope·탄소시장·산림탄소의 출처 연결 개념을 보관하고 현재 node의 1-hop만 반환합니다.</p><code>29 nodes · 31 edges · graph.py</code></article>
+          <div class="arrow">→</div>
+          <article class="box control"><small>STATEFUL ACTION CHAIN</small><h3>Relation Traversal Ledger</h3><p>Qwen이 실제 선택한 node·edge·목적·backtrack만 기록합니다. 후보 edge는 근거가 아닙니다.</p><code>relation_traversal.py · traversal hash</code></article>
+          <div class="arrow">→</div>
+          <article class="box asset"><small>EXECUTABLE ATOMIC SKILLS</small><h3>KAC Skill Runtime</h3><p>선택된 관계사슬을 provenance로 결합해 원자 스킬 코드를 실행하고 SkillRun을 생성합니다.</p><code>6 skills · skill_runtime.py · handlers</code></article>
+        </div>
+      </div>
+
+      <div class="zone output">
+        <div class="zone-label"><small>TRUST + OUTPUT</small><strong>검증·공개·감사</strong></div>
+        <div class="zone-body">
+          <article class="box verify"><small>FAIL-CLOSED BOUNDARY</small><h3>Deterministic Verifier</h3><p>두 anchor, 활성 전체 edge, SkillRun, traversal hash와 claim 근거가 모두 맞아야 PASS합니다.</p><code>verifier.py · PASS / REVIEW</code></article>
+          <div class="arrow">→</div>
+          <article class="box"><small>USER OUTPUT</small><h3>검증된 답변 공개</h3><p>PASS된 claim만 사용자에게 연결합니다. 실패하면 답을 꾸미지 않고 공개를 보류합니다.</p><code>OUTPUT_VERIFIED</code></article>
+          <div class="arrow">→</div>
+          <article class="box audit"><small>AUDIT PLANE</small><h3>실행 증명 저장</h3><p>요청·모델 신원·이벤트·Traversal·SkillRun·Manifest와 해시를 보존합니다.</p><code>runs/*.json · SQLite audit only</code></article>
+        </div>
+      </div>
+
+      <div class="guardrail">
+        <div><strong>NO FULL PATH PRELOAD</strong><p>최단경로는 탐색 완료 후 비교용입니다.</p></div>
+        <div><strong>NO QUESTION ROUTE MAP</strong><p>질문별 정답 경로표를 사용하지 않습니다.</p></div>
+        <div><strong>NO INTERNET / REMOTE AI</strong><p>모델 호출은 loopback Ollama로 제한합니다.</p></div>
+        <div><strong>NO KNOWLEDGE RAG DB</strong><p>SQLite는 지식검색 DB가 아닌 감사 저장소입니다.</p></div>
+      </div>
+    </section>
+
+    <section class="card sequence">
+      <h2>한 질문의 런타임 시퀀스</h2>
+      <p>가운데 ③–④는 연결이 완성될 때까지 반복됩니다.</p>
+      <div class="seq-flow">
+        <article class="seq"><span>1</span><b>Run 생성</b><p>이전 질문과 분리된 요청 기록</p></article>
+        <article class="seq"><span>2</span><b>Anchor 관찰</b><p>질문에 실제 등장한 개념 확인</p></article>
+        <article class="seq loop-step"><span>3</span><b>1-hop Observation</b><p>현재 node의 직접 관계만 공개</p></article>
+        <article class="seq loop-step"><span>4</span><b>Qwen Action</b><p>edge 하나·backtrack·종료 선택</p></article>
+        <article class="seq skill-step"><span>5</span><b>SkillRun</b><p>활성 경로 hash로 원자 스킬 실행</p></article>
+        <article class="seq verify-step"><span>6</span><b>Claim 검증</b><p>개념·edge·Skill 근거의 폐쇄 확인</p></article>
+        <article class="seq"><span>7</span><b>PASS 공개</b><p>답변과 전체 실행 증명 보존</p></article>
+      </div>
+    </section>
+
+    <div class="truth-grid">
+      <section class="card truth">
+        <h2>Qwen이 스스로 결정하는 것</h2>
+        <div class="truth-list">
+          <div class="truth-item"><b>✓</b><div><strong>현재 후보 중 다음 관계 edge</strong><p>매 turn 하나만 선택하며 결과를 본 다음 다시 판단합니다.</p></div></div>
+          <div class="truth-item"><b>✓</b><div><strong>막힌 분기의 backtrack 또는 중단</strong><p>선택 이력은 보존되고 폐기 경로는 활성 근거에서 제외됩니다.</p></div></div>
+          <div class="truth-item"><b>✓</b><div><strong>실행할 원자 Skill과 입력</strong><p>완성된 관계사슬을 토대로 도구 실행을 요청합니다.</p></div></div>
+          <div class="truth-item"><b>✓</b><div><strong>최종 답변 후보의 자연어</strong><p>서버가 고정 답변 문장을 반환하지 않습니다.</p></div></div>
+        </div>
+      </section>
+      <section class="card truth">
+        <h2>런타임이 강제하는 것</h2>
+        <div class="truth-list">
+          <div class="truth-item no"><b>!</b><div><strong>관찰하지 않은 edge 사용 금지</strong><p>후보로 보기만 한 관계는 claim 근거가 될 수 없습니다.</p></div></div>
+          <div class="truth-item no"><b>!</b><div><strong>전체 경로 사전 제공 금지</strong><p>AI가 자연스럽게 단계별로 연결하도록 경계를 유지합니다.</p></div></div>
+          <div class="truth-item no"><b>!</b><div><strong>Skill 실행 없는 답변 공개 금지</strong><p>실행된 SkillRun과 Traversal hash가 일치해야 합니다.</p></div></div>
+          <div class="truth-item no"><b>!</b><div><strong>근거가 덜 닫힌 claim 공개 금지</strong><p>Verifier가 REVIEW하면 Qwen 재작성 또는 안전 중단으로 이동합니다.</p></div></div>
+        </div>
+      </section>
+    </div>
+
+    <p class="footer">현재 구현 기준 · Local Qwen + CCS 1-hop graph environment + Agent-selected traversal + executable KAC skills + fail-closed verifier. 실제 거래·등록부 변경과 외부 Outcome은 이 아키텍처 범위에 포함하지 않습니다.</p>
+  </div>
+</body>
+</html>

@@ -17,6 +17,16 @@ from .skill_compiler import skill_catalog
 from .validation_bank import public_question_bank
 
 
+STATIC_ALLOWLIST = {
+    "index.html",
+    "kac-architecture.html",
+    "runtime-visual.html",
+    "runtime-deep-dive.html",
+    "assets/style.css",
+    "assets/app.js",
+}
+
+
 def _json_bytes(value: Any) -> bytes:
     return (json.dumps(value, ensure_ascii=False, separators=(",", ":")) + "\n").encode("utf-8")
 
@@ -84,9 +94,8 @@ class SupestarHandler(BaseHTTPRequestHandler):
     def do_HEAD(self) -> None:
         path = unquote(urlparse(self.path).path)
         relative = "index.html" if path in {"", "/"} else path.lstrip("/")
-        allowed = {"index.html", "runtime-visual.html", "runtime-deep-dive.html", "assets/style.css", "assets/app.js"}
         target = self.server.root / "web" / relative
-        if relative not in allowed or not target.is_file():
+        if relative not in STATIC_ALLOWLIST or not target.is_file():
             self.send_response(404)
             self.send_header("Content-Length", "0")
             self.end_headers()
@@ -175,8 +184,7 @@ class SupestarHandler(BaseHTTPRequestHandler):
 
     def _serve_static(self, request_path: str) -> None:
         relative = "index.html" if request_path in {"", "/"} else request_path.lstrip("/")
-        allowed = {"index.html", "runtime-visual.html", "runtime-deep-dive.html", "assets/style.css", "assets/app.js"}
-        if relative not in allowed:
+        if relative not in STATIC_ALLOWLIST:
             self._send_json(404, {"error":"NOT_FOUND"})
             return
         target = self.server.root / "web" / relative
